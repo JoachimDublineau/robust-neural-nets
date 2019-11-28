@@ -14,8 +14,7 @@ tf.keras.backend.clear_session()
 # Parser configuration
 # -------------------------
 
-parser = argparse.ArgumentParser(
-    description="Script to train a simple CIFAR10 network")
+parser = argparse.ArgumentParser(description="Script to train a simple CIFAR10 network")
 parser.add_argument(
     "-e", "--epochs", help="Number of epochs. Default is 20", type=int, default=20
 )
@@ -77,10 +76,52 @@ gpu_id = args.gpu
 
 
 def build_simple_network():
-    # TODO
+    X = klayers.Input(shape=input_shape)
 
-    # Get data
-    # -------------------------
+    network = klayers.Conv2D(
+        32,
+        activation=None,
+        kernel_size=(3, 3),
+        padding="same",
+        kernel_initializer="he_normal",
+        kernel_regularizer=regularizers.l2(1e-3),
+    )(X)
+    network = klayers.BatchNormalization()(network)
+    network = klayers.Activation("relu")(network)
+    network = klayers.Dropout(dropout)(network)
+
+    network = klayers.Conv2D(
+        32,
+        activation=None,
+        kernel_size=(3, 3),
+        padding="same",
+        kernel_initializer="he_normal",
+        kernel_regularizer=regularizers.l2(1e-3),
+    )(network)
+    network = klayers.BatchNormalization()(network)
+    network = klayers.Activation("relu")(network)
+    network = klayers.Dropout(dropout)(network)
+
+    network = klayers.Conv2D(
+        32,
+        activation=None,
+        kernel_size=(3, 3),
+        padding="same",
+        kernel_initializer="he_normal",
+        kernel_regularizer=regularizers.l2(1e-3),
+    )(network)
+    network = klayers.BatchNormalization()(network)
+    network = klayers.Activation("relu")(network)
+    network = klayers.Dropout(dropout)(network)
+
+    network = klayers.AveragePooling2D()(network)
+    network = klayers.Flatten()(network)
+    network = klayers.Dense(nb_classes, activation="softmax")(network)
+    return Model(inputs=X, outputs=network)
+
+
+# Get data
+# -------------------------
 
 
 if verbose:
