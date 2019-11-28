@@ -71,6 +71,16 @@ path_weights = args.weights
 path_results = args.path
 gpu_id = args.gpu
 
+# GPU configuration
+# -------------------------
+
+if gpu_id is not None:
+    if verbose:
+        print("GPU configuration...")
+
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+
 # Simple network
 # -------------------------
 
