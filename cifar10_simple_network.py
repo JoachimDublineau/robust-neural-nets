@@ -9,6 +9,8 @@ import tensorflow.keras.regularizers as regularizers
 from tensorflow.keras.datasets import cifar10
 from tensorflow.keras.models import Model, load_model
 
+import src
+
 tf.keras.backend.clear_session()
 
 # Parser configuration
@@ -37,16 +39,20 @@ parser.add_argument(
 parser.add_argument(
     "-w",
     "--weights",
-    help="h5 file from which load (if the file exists) and save the model weights. Default is cifar10_simple_model.h5",
+    help="h5 file from which load (if the file exists) and save the model weights. Default is {}cifar10_simple_model.h5".format(
+        src.MODELS_DIR
+    ),
     type=str,
-    default="cifar10_simple_model.h5",
+    default="{}cifar10_simple_model.h5".format(src.MODELS_DIR),
 )
 parser.add_argument(
     "-p",
     "--path",
-    help="Begin path of training results. Files <path>_accuracy.png and <path>_loss.png will be created. Default is train_results",
+    help="Begin path of training results. Files <path>_accuracy.png and <path>_loss.png will be created. Default is {}train_results".format(
+        src.RESULTS_DIR
+    ),
     type=str,
-    default="train_results",
+    default="{}train_results".format(src.RESULTS_DIR),
 )
 parser.add_argument(
     "-g",
@@ -70,6 +76,9 @@ verbose = args.verbose
 path_weights = args.weights
 path_results = args.path
 gpu_id = args.gpu
+
+src.create_dir_if_not_found(src.MODELS_DIR)
+src.create_dir_if_not_found(src.RESULTS_DIR)
 
 # GPU configuration
 # -------------------------
