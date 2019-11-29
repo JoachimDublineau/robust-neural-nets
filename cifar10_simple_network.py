@@ -39,7 +39,7 @@ parser.add_argument(
 parser.add_argument(
     "-w",
     "--weights",
-    help="h5 file from which load (if the file exists) and save the model weights. Default is {}cifar10_simple_model.h5".format(
+    help="h5 file from which load (if it exists) and save the model weights. Default is {}cifar10_simple_model.h5".format(
         src.MODELS_DIR
     ),
     type=str,
@@ -57,7 +57,7 @@ parser.add_argument(
 parser.add_argument(
     "-g",
     "--gpu",
-    help="The ID of the GPU to use (order is PCI_BUS_ID). If not set, no GPU configuration is done. Default is None",
+    help="The ID of the GPU (ordered by PCI_BUS_ID) to use. If not set, no GPU configuration is done. Default is None",
     type=int,
     default=None,
 )
