@@ -1,7 +1,5 @@
 import os
 
-import tqdm
-
 
 def create_dir_if_not_found(directory_path):
     """

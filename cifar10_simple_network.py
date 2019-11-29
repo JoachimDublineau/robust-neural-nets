@@ -90,6 +90,9 @@ if gpu_id is not None:
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
+    if verbose:
+        print("GPU configuration done.")
+
 # Simple network
 # -------------------------
 
@@ -154,6 +157,9 @@ x_test = x_test.astype("float32") / 255
 y_train = tf.keras.utils.to_categorical(y_train, num_classes=nb_classes)
 y_test = tf.keras.utils.to_categorical(y_test, num_classes=nb_classes)
 
+if verbose:
+    print("Data is loaded.")
+
 # Build model
 # -------------------------
 
@@ -170,6 +176,7 @@ model.compile(
 
 if verbose:
     print(model.summary())
+    print("Model is built.")
 
 # Train model
 # -------------------------
@@ -190,9 +197,15 @@ history = model.fit(
 )
 
 if verbose:
+    print("Model is trained.")
+
+if verbose:
     print("Saving weights...")
 
 model.save(path_weights)
+
+if verbose:
+    print("Weights are saved.")
 
 # Saving graphs
 # -------------------------
@@ -206,7 +219,7 @@ plt.title("Model accuracy")
 plt.ylabel("Accuracy")
 plt.xlabel("Epoch")
 plt.legend(["Train", "Valid"], loc="upper right")
-plt.savefig("{}_accuracy.png".format(path_results), dpi=400)
+plt.savefig("{}_accuracy.png".format(path_results), dpi=400, transparent=True)
 plt.clf()
 
 plt.plot(history.history["loss"], color="c")
@@ -215,4 +228,7 @@ plt.title("Model loss (categorical crossentropy)")
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
 plt.legend(["Train", "Valid"], loc="upper right")
-plt.savefig("{}_loss.png".format(path_results), dpi=400)
+plt.savefig("{}_loss.png".format(path_results), dpi=400, transparent=True)
+
+if verbose:
+    print("Graphs are saved.")
