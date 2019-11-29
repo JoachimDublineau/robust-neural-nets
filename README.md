@@ -6,15 +6,13 @@ This is the final assignment of the Data Science Project course of the [IASD Mas
 You need to have Python 3 > 3.6 installed on your system.
 
 ### Installing
-* 1) To install required packages, you can run the following command.
-
-    pip install -r requirements.txt
-
-* 2) Clone the repository.
+* 1) Clone the repository.
 
     git clone https://github.com/Dauphine-Java-M1/robust-neural-nets-476f6c646f72616b-42.git
 
-* 3) You are good to go!
+* 2) Install python requirements with following command.
+
+    pip install -r requirements.txt
 
 ## Usage
 ### `cifar10_simple_network.py`
