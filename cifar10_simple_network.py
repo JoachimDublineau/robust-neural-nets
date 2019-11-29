@@ -4,7 +4,6 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.datasets import cifar10
 from tensorflow.keras.models import load_model
 
 import src
@@ -96,13 +95,13 @@ if gpu_id is not None:
 if verbose:
     print("Getting data...")
 
-(x_train, y_train), (x_test, y_test) = cifar10.load_data()
+x_train, y_train, x_test, y_test = src.cifar10.get_data()
 
 x_train = x_train.astype("float32") / 255
 x_test = x_test.astype("float32") / 255
 
-y_train = tf.keras.utils.to_categorical(y_train, num_classes=src.cifar10.nb_classes)
-y_test = tf.keras.utils.to_categorical(y_test, num_classes=src.cifar10.nb_classes)
+y_train = tf.keras.utils.to_categorical(y_train, num_classes=len(src.cifar10.labels))
+y_test = tf.keras.utils.to_categorical(y_test, num_classes=len(src.cifar10.labels))
 
 if verbose:
     print("Data is loaded.")

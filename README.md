@@ -3,7 +3,9 @@ This is the final assignment of the Data Science Project course of the [IASD Mas
 
 ## Getting Started
 ### Prerequisites
-You need to have Python 3 > 3.6 installed on your system.
+* Python 3
+
+You need Python 3.6 to Python 3.7 to run this project. An install guide can be found [here](https://wiki.python.org/moin/BeginnersGuide/Download).
 
 ### Installing
 * 1) Clone the repository.

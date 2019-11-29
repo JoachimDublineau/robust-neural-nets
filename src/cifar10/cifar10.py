@@ -1,12 +1,39 @@
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.regularizers as regularizers
+from tensorflow.keras.datasets import cifar10
 from tensorflow.keras.models import Model, load_model
 
-nb_classes = 10
 channels = 3
 height = 32
 width = 32
 input_shape = (height, width, channels)
+
+labels = [
+    "airplane",
+    "automobile",
+    "bird",
+    "cat",
+    "deer",
+    "dog",
+    "frog",
+    "horse",
+    "ship",
+    "truck",
+]
+
+
+def get_data():
+    """ Function to get CIFAR10 data
+
+    Returns:
+        x_train (np_array): training tensors
+        y_train (np_array): training labels
+        x_test (np_array): testing tensors
+        y_test (np_array): testing labels
+    """
+    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    return x_train, y_train, x_test, y_test
+
 
 # Simple network
 # -------------------------
@@ -61,7 +88,7 @@ def build_simple_network(dropout):
 
     network = klayers.AveragePooling2D()(network)
     network = klayers.Flatten()(network)
-    network = klayers.Dense(nb_classes, activation="softmax")(network)
+    network = klayers.Dense(len(labels), activation="softmax")(network)
 
     cifar10_network = Model(inputs=X, outputs=network)
     return cifar10_network
