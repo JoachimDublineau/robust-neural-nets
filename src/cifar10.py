@@ -13,6 +13,14 @@ input_shape = (height, width, channels)
 
 
 def build_simple_network(dropout):
+    """ Function to build a simple network for CIFAR10
+
+    Args:
+        dropout (int): the value of dropout
+
+    Returns:
+        cifar10_network: the final model
+    """
     X = klayers.Input(input_shape)
 
     network = klayers.Conv2D(
@@ -54,4 +62,6 @@ def build_simple_network(dropout):
     network = klayers.AveragePooling2D()(network)
     network = klayers.Flatten()(network)
     network = klayers.Dense(nb_classes, activation="softmax")(network)
-    return Model(inputs=X, outputs=network)
+
+    cifar10_network = Model(inputs=X, outputs=network)
+    return cifar10_network
