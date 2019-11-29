@@ -1,1 +1,1 @@
-from .cifar10 import build_simple_network, get_data, labels
+from .cifar10 import build_simple_network, load_data, labels

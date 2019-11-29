@@ -22,8 +22,8 @@ labels = [
 ]
 
 
-def get_data():
-    """ Function to get CIFAR10 data
+def load_data():
+    """ Function to load CIFAR10 data. If data is not in ~/.keras/datasets/ it will be downloaded
 
     Returns:
         x_train (np_array): training tensors
