@@ -57,7 +57,7 @@ parser.add_argument(
 parser.add_argument(
     "-g",
     "--gpu",
-    help="The ID of the GPU to use. If not set, no GPU configuration is done. Default is None",
+    help="The ID of the GPU to use (order is PCI_BUS_ID). If not set, no GPU configuration is done. Default is None",
     type=int,
     default=None,
 )
