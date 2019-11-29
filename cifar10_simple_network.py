@@ -101,8 +101,8 @@ if verbose:
 x_train = x_train.astype("float32") / 255
 x_test = x_test.astype("float32") / 255
 
-y_train = tf.keras.utils.to_categorical(y_train, num_classes=src.nb_classes)
-y_test = tf.keras.utils.to_categorical(y_test, num_classes=src.nb_classes)
+y_train = tf.keras.utils.to_categorical(y_train, num_classes=src.cifar10.nb_classes)
+y_test = tf.keras.utils.to_categorical(y_test, num_classes=src.cifar10.nb_classes)
 
 if verbose:
     print("Data is loaded.")
@@ -113,7 +113,7 @@ if verbose:
 if verbose:
     print("Building model...")
 
-model = src.build_simple_network(dropout)
+model = src.cifar10.build_simple_network(dropout)
 
 model.compile(
     loss=tf.keras.losses.categorical_crossentropy,
