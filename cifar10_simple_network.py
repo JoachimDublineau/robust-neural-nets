@@ -38,19 +38,19 @@ parser.add_argument(
     "-w",
     "--weights",
     help="h5 file from which load (if it exists) and save the model weights. Default is {}cifar10_simple_model.h5".format(
-        src.MODELS_DIR
+        src.models_dir
     ),
     type=str,
-    default="{}cifar10_simple_model.h5".format(src.MODELS_DIR),
+    default="{}cifar10_simple_model.h5".format(src.models_dir),
 )
 parser.add_argument(
     "-p",
     "--path",
     help="Begin path of training results. Files <path>_accuracy.png and <path>_loss.png will be created. Default is {}train_results".format(
-        src.RESULTS_DIR
+        src.results_dir
     ),
     type=str,
-    default="{}train_results".format(src.RESULTS_DIR),
+    default="{}train_results".format(src.results_dir),
 )
 parser.add_argument(
     "-g",
@@ -72,8 +72,8 @@ path_weights = args.weights
 path_results = args.path
 gpu_id = args.gpu
 
-src.create_dir_if_not_found(src.MODELS_DIR)
-src.create_dir_if_not_found(src.RESULTS_DIR)
+src.create_dir_if_not_found(src.models_dir)
+src.create_dir_if_not_found(src.results_dir)
 
 # GPU configuration
 # -------------------------

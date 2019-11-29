@@ -1,1 +1,1 @@
-MODELS_DIR = "models/"
+models_dir = "models/"

@@ -1,1 +1,1 @@
-RESULTS_DIR = 'results/'
+results_dir = 'results/'
