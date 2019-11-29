@@ -4,10 +4,8 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.layers as klayers
-import tensorflow.keras.regularizers as regularizers
 from tensorflow.keras.datasets import cifar10
-from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.models import load_model
 
 import src
 
@@ -90,54 +88,6 @@ if gpu_id is not None:
     if verbose:
         print("GPU configuration done.")
 
-# Simple network
-# -------------------------
-
-
-def build_simple_network():
-    X = klayers.Input(shape=src.input_shape)
-
-    network = klayers.Conv2D(
-        32,
-        activation=None,
-        kernel_size=(3, 3),
-        padding="same",
-        kernel_initializer="he_normal",
-        kernel_regularizer=regularizers.l2(1e-3),
-    )(X)
-    network = klayers.BatchNormalization()(network)
-    network = klayers.Activation("relu")(network)
-    network = klayers.Dropout(dropout)(network)
-
-    network = klayers.Conv2D(
-        32,
-        activation=None,
-        kernel_size=(3, 3),
-        padding="same",
-        kernel_initializer="he_normal",
-        kernel_regularizer=regularizers.l2(1e-3),
-    )(network)
-    network = klayers.BatchNormalization()(network)
-    network = klayers.Activation("relu")(network)
-    network = klayers.Dropout(dropout)(network)
-
-    network = klayers.Conv2D(
-        32,
-        activation=None,
-        kernel_size=(3, 3),
-        padding="same",
-        kernel_initializer="he_normal",
-        kernel_regularizer=regularizers.l2(1e-3),
-    )(network)
-    network = klayers.BatchNormalization()(network)
-    network = klayers.Activation("relu")(network)
-    network = klayers.Dropout(dropout)(network)
-
-    network = klayers.AveragePooling2D()(network)
-    network = klayers.Flatten()(network)
-    network = klayers.Dense(src.nb_classes, activation="softmax")(network)
-    return Model(inputs=X, outputs=network)
-
 
 # Get data
 # -------------------------
@@ -163,7 +113,7 @@ if verbose:
 if verbose:
     print("Building model...")
 
-model = build_simple_network()
+model = src.build_simple_network(dropout)
 
 model.compile(
     loss=tf.keras.losses.categorical_crossentropy,
