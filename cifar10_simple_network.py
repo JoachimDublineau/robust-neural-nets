@@ -65,9 +65,6 @@ parser.add_argument(
 # Global parameters
 # -------------------------
 
-nb_classes = 10
-input_shape = (32, 32, 3)
-
 args = parser.parse_args()
 epochs = args.epochs
 batch_size = args.batch_size
@@ -98,7 +95,7 @@ if gpu_id is not None:
 
 
 def build_simple_network():
-    X = klayers.Input(shape=input_shape)
+    X = klayers.Input(shape=src.INPUT_SHAPE)
 
     network = klayers.Conv2D(
         32,
@@ -138,7 +135,7 @@ def build_simple_network():
 
     network = klayers.AveragePooling2D()(network)
     network = klayers.Flatten()(network)
-    network = klayers.Dense(nb_classes, activation="softmax")(network)
+    network = klayers.Dense(src.NB_CLASSES, activation="softmax")(network)
     return Model(inputs=X, outputs=network)
 
 
@@ -154,8 +151,8 @@ if verbose:
 x_train = x_train.astype("float32") / 255
 x_test = x_test.astype("float32") / 255
 
-y_train = tf.keras.utils.to_categorical(y_train, num_classes=nb_classes)
-y_test = tf.keras.utils.to_categorical(y_test, num_classes=nb_classes)
+y_train = tf.keras.utils.to_categorical(y_train, num_classes=src.NB_CLASSES)
+y_test = tf.keras.utils.to_categorical(y_test, num_classes=src.NB_CLASSES)
 
 if verbose:
     print("Data is loaded.")
