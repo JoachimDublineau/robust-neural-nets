@@ -1,5 +1,5 @@
-NB_CLASSES = 10
-CHANNELS = 3
-HEIGHT = 32
-WIDTH = 32
-INPUT_SHAPE = (HEIGHT, WIDTH, CHANNELS)
+nb_classes = 10
+channels = 3
+height = 32
+widht = 32
+input_shape = (height, witdh, channels)
