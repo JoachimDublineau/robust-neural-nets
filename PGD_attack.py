@@ -43,53 +43,81 @@ def compute_grad(model, loss, image, label):
     Fast
     """
     kast = lambda element: K.cast(element, dtype='float32')
-    x = kast(image)
-    y = kast(label)
+    x = kast([image])
     with tf.GradientTape() as tape:
         tape.watch(x)
         prediction = model(x)
         loss_ = loss(label, prediction)
     gradient = tape.gradient(loss_, x)
     signed_grad = tf.sign(gradient)
-    return signed_grad
+    return signed_grad[0]
 
-def projection(point, ref, eps, norm):
-    dist = np.linalg.norm(ref[0] - point[0], ord = norm)
+def projection(point, ref, eps):
+    dist = np.linalg.norm(ref - point)
     if dist < eps:
         return point
-    return [ref + eps*(point[0] - ref[0])/dist] 
+    return eps*(point - ref)/dist 
 
 # # Test projection:
-# a = np.array([1,1], dtype = np.float32)
-# b = np.array([0,0], dtype = np.float32)
+# a = np.array([2,2], dtype = np.float32)
+# b = np.array([1,1], dtype = np.float32)
 # print(a-b)
 # print(np.linalg.norm(a-b, ord=2))
-# print(projection(a, b, 1, 2))
+# print(projection(a, b, 1))
 
-def maximize_loss(model, loss, ref_image, y_image, rate, eps, 
-                  norm = 2, nb_it = 10):
-    curr_perturbation = rate*compute_grad(model, loss, ref_image, y_image)
-    print(curr_perturbation.shape)
+def generate_pgd_attack(model, loss, ref_image, y_image, eps, 
+                        norm = 2, nb_it = 10):
+    curr_perturbation = eps*compute_grad(model, loss, 
+                                         ref_image, y_image)
+    curr_perturbation = projection(curr_perturbation, 
+                                   ref_image, eps)
     for iter in range(nb_it):
         curr_perturbated_img = ref_image + curr_perturbation
-        signed_grad = compute_grad(model, loss, curr_perturbated_img, y_image)
-        curr_perturbation += projection(rate*signed_grad, ref_image, eps,norm)
+        signed_grad = compute_grad(model, loss, curr_perturbated_img, 
+                                   y_image)
+        curr_perturbation += eps*signed_grad
+        curr_perturbation = projection(curr_perturbation, ref_image, 
+                                       eps)
     return curr_perturbation
 
-x_train, y_train, x_test, y_test = src.cifar10.load_data()
+# # Test PGD Attack:
+# x_train, y_train, x_test, y_test = src.cifar10.load_data()
 
-x_train = x_train.astype("float32") / 255
-x_test = x_test.astype("float32") / 255
+# x_train = x_train.astype("float32") / 255
+# x_test = x_test.astype("float32") / 255
 
-y_train = tf.keras.utils.to_categorical(y_train, num_classes=len(src.cifar10.labels))
-y_test = tf.keras.utils.to_categorical(y_test, num_classes=len(src.cifar10.labels))
+# y_train = tf.keras.utils.to_categorical(y_train, \
+#     num_classes = len(src.cifar10.labels))
+# y_test = tf.keras.utils.to_categorical(y_test, \
+#     num_classes = len(src.cifar10.labels))
 
-image = x_train[0]
-label = y_train[0]
-model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
-print(model.summary())
+# image = x_train[0]
+# label = y_train[0]
+# model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
+# perturbation = generate_pgd_attack(model, categorical_crossentropy, 
+#                              image, label, 1)
+# print("Perturbation:")
+# # print(perturbation)
+# print("Norm:", np.linalg.norm(perturbation))
+# print()
+# print("Image:")
+# # print(image)
+# print("Norm:", np.linalg.norm(image))
+# print("Model prediction:", np.argmax(model(K.cast([image], 
+#                                            dtype = 'float32'))[0]))
+# print()
+# print("Perturbated image:")
+# print("Norm:", np.linalg.norm(image + perturbation))
+# print("Model prediction:", np.argmax(model(K.cast([image + perturbation], 
+#                                         dtype = 'float32'))[0]))
+# print()
 
-import matplotlib.pyplot as plt
-perturbation = maximize_loss(model, categorical_crossentropy, [image], [label], 0.1, 1)
-plt.imshow(image + perturbation)
-plt.show()
+# import matplotlib.pyplot as plt
+# fig=plt.figure(figsize=(1, 3))
+# fig.add_subplot(1, 3, 1)
+# plt.imshow(image)
+# fig.add_subplot(1, 3, 2)
+# plt.imshow(perturbation)
+# fig.add_subplot(1, 3, 3)
+# plt.imshow(image + perturbation)
+# plt.show()
