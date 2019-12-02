@@ -4,6 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras.callbacks import CSVLogger, ModelCheckpoint
 from tensorflow.keras.models import load_model
 
 import src
@@ -43,16 +44,14 @@ parser.add_argument(
     default="{}cifar10_simple_model.h5".format(src.models_dir),
 )
 parser.add_argument(
-    "-p",
-    "--path",
-    help="Begin path of training results. Files <path>_accuracy.png and <path>_loss.png will be created. Default is {}train_results".format(
+    "--output-log",
+    help="Output file name of training info. Default is {}training_log.csv".format(
         src.results_dir
     ),
     type=str,
-    default="{}train_results".format(src.results_dir),
+    default="{}training_log.csv".format(src.results_dir),
 )
 parser.add_argument(
-    "-g",
     "--gpu",
     help="The ID of the GPU (ordered by PCI_BUS_ID) to use. If not set, no GPU configuration is done. Default is None",
     type=int,
@@ -68,7 +67,7 @@ batch_size = args.batch_size
 dropout = args.dropout
 verbose = args.verbose
 path_weights = args.weights
-path_results = args.path
+output_log = args.output_log
 gpu_id = args.gpu
 
 src.create_dir_if_not_found(src.models_dir)
@@ -133,6 +132,9 @@ if verbose:
 if path_weights is not None and os.path.exists(path_weights):
     model.load_weights(path_weights)
 
+csv_logger = CSVLogger(output_log, append=True, separator=";")
+checkpoint = ModelCheckpoint(path_weights, verbose=int(verbose), save_freq="epoch")
+
 history = model.fit(
     x_train,
     y_train,
@@ -140,6 +142,7 @@ history = model.fit(
     validation_data=(x_test, y_test),
     epochs=epochs,
     verbose=int(verbose),
+    callbacks=[csv_logger, checkpoint],
 )
 
 if verbose:
@@ -152,29 +155,3 @@ model.save(path_weights)
 
 if verbose:
     print("Weights are saved.")
-
-# Saving graphs
-# -------------------------
-
-if verbose:
-    print("Saving graphs...")
-
-plt.plot(history.history["accuracy"], color="c")
-plt.plot(history.history["val_accuracy"], color="r")
-plt.title("Model accuracy")
-plt.ylabel("Accuracy")
-plt.xlabel("Epoch")
-plt.legend(["Train", "Valid"], loc="upper right")
-plt.savefig("{}_accuracy.png".format(path_results), dpi=400, transparent=True)
-plt.clf()
-
-plt.plot(history.history["loss"], color="c")
-plt.plot(history.history["val_loss"], color="r")
-plt.title("Model loss (categorical crossentropy)")
-plt.ylabel("Loss")
-plt.xlabel("Epoch")
-plt.legend(["Train", "Valid"], loc="upper right")
-plt.savefig("{}_loss.png".format(path_results), dpi=400, transparent=True)
-
-if verbose:
-    print("Graphs are saved.")
