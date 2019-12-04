@@ -25,7 +25,7 @@ parser.add_argument('--output-csv', '-csv', default='{}fgsm_evaluation_log.csv'.
 parser.add_argument('--save-img', type=int,
                     help='The number of random images to save for each epsilon. Images will be saved under "[output-csv]_[epsilon]_image.png"')
 parser.add_argument('--tf-log-level', default='3',
-                    choices=['0', '1', '2', '3'], help='Tensorflow minimum cpp log level')
+                    choices=['0', '1', '2', '3'], help='Tensorflow minimum cpp log level. Default is 3')
 
 args = parser.parse_args()
 
