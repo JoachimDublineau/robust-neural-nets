@@ -1,4 +1,4 @@
-from src import cifar10
+from src import attacks, cifar10
 
 from .models import models_dir
 from .results import results_dir
