@@ -53,6 +53,19 @@ def compute_grad(model, loss, image, label):
     return signed_grad[0]
 
 def projection(point, ref, eps):
+    """
+    Computes the projection of the point vector on the ball
+    centered in ref of radius eps.
+    INPUTS:
+    - point: array representing the point the we want to project
+    - ref: center of the ball on which the projection will be 
+    done
+    - eps: radius of the ball
+    OUTPUT:
+    - projection: array of the same shape of point and ref 
+    COMPUTATION TIME:
+    Very Fast
+    """
     dist = np.linalg.norm(ref - point)
     if dist < eps:
         return point
@@ -67,6 +80,26 @@ def projection(point, ref, eps):
 
 def generate_pgd_attack(model, loss, ref_image, y_image, eps, 
                         norm = 2, nb_it = 10):
+    """
+    Computes a pgd attack for a given ref_image, model and loss.
+    INPUTS:
+    - model: tensorflow.keras model compiled with the loss and having
+    input shape = ref_image.shape.
+    - loss: element of keras.losses or customized loss respecting
+    the same structure.
+    - ref_image: array representing the input image.
+    - y_image: label of the input image.
+    - eps: maximal norm of the attack.
+    - norm: argument for the calculation of the norm with 
+    numpy.linalg.norm can be 2 or 'inf'. (Unused for now)
+    - nb_it: number of iterations for the calculation of the PGD 
+    attack.
+    OUTPUTS:
+    - curr_perturbation: array of the same shape as ref_image 
+    representing the pdg attack.
+    COMPUTATION TIME:
+    Fast.
+    """
     curr_perturbation = eps*compute_grad(model, loss, 
                                          ref_image, y_image)
     curr_perturbation = projection(curr_perturbation, 
@@ -121,3 +154,5 @@ def generate_pgd_attack(model, loss, ref_image, y_image, eps,
 # fig.add_subplot(1, 3, 3)
 # plt.imshow(image + perturbation)
 # plt.show()
+
+## CODING THE BATCH Calculation : 
