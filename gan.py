@@ -32,9 +32,9 @@ parser.add_argument(
 parser.add_argument(
     "-c",
     "--choosen-class",
-    help="The class on which the GAN will be trained. Default is 4",
+    help="The class on which the GAN will be trained. Default is 8",
     type=int,
-    default=4,
+    default=8,
 )
 parser.add_argument(
     "-v",
@@ -60,6 +60,13 @@ parser.add_argument(
     default="{}gan_training_log.csv".format(src.results_dir),
 )
 parser.add_argument(
+    "--save-img",
+    help="If set generated (artificial) images will be saved after each epoch under {}gan_generated_images_<epoch>.png".format(
+        src.results_dir
+    ),
+    action="store_true",
+)
+parser.add_argument(
     "--gpu",
     help="The ID of the GPU (ordered by PCI_BUS_ID) to use. If not set, no GPU configuration is done. Default is None",
     type=int,
@@ -82,6 +89,7 @@ random_vec_size = args.random_vec
 choosen_class = args.choosen_class
 verbose = args.verbose
 path_weights = args.weights
+save_img = args.save_img
 output_log = args.output_log
 gpu_id = args.gpu
 
@@ -261,3 +269,23 @@ for e in range(epochs):
             print("generator_loss: {}".format(generator_loss))
 
     gan.save(path_weights)
+
+    # Saving 5 fake pictures
+    # -------------------------
+
+    if save_img:
+        fig, axs = plt.subplots(1, 5)
+
+        for f in range(5):
+            random_vec = np.random.normal(loc=0, scale=1, size=(1, random_vec_size))
+            fake_image = generator.predict_on_batch(random_vec)[0]
+            fake_image = 0.5 * fake_image + 0.5  # Rescale
+
+            axs[f].imshow(fake_image)
+            axs[f].axis("off")
+
+        fig.savefig("{}gan_generated_images_{}.png".format(src.results_dir, e))
+        plt.close()
+
+if verbose:
+    print("Model is trained.")
