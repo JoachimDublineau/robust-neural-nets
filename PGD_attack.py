@@ -1,6 +1,6 @@
 import numpy as np
-from keras import backend as K 
-from keras.losses import categorical_crossentropy
+from tensorflow.keras import backend as K 
+from tensorflow.keras.losses import categorical_crossentropy
 import tensorflow as tf
 import src
 
@@ -127,6 +127,7 @@ y_test = tf.keras.utils.to_categorical(y_test, \
 image = x_train[0]
 label = y_train[0]
 model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
+print(model.summary())
 perturbation = generate_pgd_attack(model, categorical_crossentropy, 
                              image, label, 1)
 print("Perturbation:")
