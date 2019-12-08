@@ -25,6 +25,12 @@ parser.add_argument(
     "-b", "--batch-size", help="Batch size. Default is 128", type=int, default=128
 )
 parser.add_argument(
+    "--random-vec",
+    help="The size of the random vector given to generator model. Default is 100",
+    type=int,
+    default=100,
+)
+parser.add_argument(
     "-v",
     "--verbose",
     help="If set, output details of the execution",
@@ -66,6 +72,7 @@ parser.add_argument(
 args = parser.parse_args()
 epochs = args.epochs
 batch_size = args.batch_size
+random_vec_size = args.random_vec
 verbose = args.verbose
 path_weights = args.weights
 output_log = args.output_log
@@ -99,6 +106,7 @@ if verbose:
 
 x_train, y_train, x_test, y_test = src.cifar10.load_data()
 
+# Scale to [-1, 1]
 x_train = (x_train.astype("float32") - 127.5) / 127.5
 x_test = (x_test.astype("float32") - 127.5) / 127.5
 
@@ -111,11 +119,14 @@ if verbose:
 # Build model
 # -------------------------
 
+if verbose:
+    print("Building model...")
+
 
 def build_generator_model():
-    """ Generator model. Transforms random vector of size (100,) into a picture
+    """ Generator model. Transforms random vector into a picture
     """
-    generator_input = layers.Input(shape=(100,))
+    generator_input = layers.Input(shape=(random_vec_size,))
 
     model = layers.Dense(8 * 8 * 128, use_bias=False)(generator_input)
     model = layers.BatchNormalization()(model)
@@ -139,7 +150,7 @@ def build_generator_model():
 
     # Upsmalpling: shape (None, 16, 16, 32) to shape (None, 32, 32, 3)
     model = layers.Conv2DTranspose(
-        3, (5, 5), strides=(2, 2), padding="same", use_bias=False
+        3, (5, 5), strides=(2, 2), padding="same", use_bias=False, activation="tanh"
     )(model)
 
     generator_model = Model(generator_input, model)
@@ -162,33 +173,81 @@ def build_discriminator_model():
     model = layers.Dropout(0.3)(model)
 
     model = layers.Flatten()(model)
-    model = layers.Dense(1)(model)
+    model = layers.Dense(1, activation="sigmoid")(model)
 
     discriminator_model = Model(discriminator_input, model)
     return discriminator_model
 
 
-# Losses and optimizers
+# Building discriminator model
+discriminator = build_discriminator_model()
+discriminator.compile(
+    loss="binary_crossentropy",
+    optimizer=tf.keras.optimizers.Adam(lr=1e-4),
+    metrics=["accuracy"],
+)
+discriminator.trainable = False
+
+# Building generator model
+generator = build_generator_model()
+
+# Building GAN model
+random_vec = layers.Input(shape=(random_vec_size,))
+decision = discriminator(generator(random_vec))
+
+gan = Model(inputs=random_vec, outputs=decision)
+gan.compile(loss="binary_crossentropy", optimizer=tf.keras.optimizers.Adam(lr=1e-4))
+
+if verbose:
+    print("Model is built.")
+    print(gan.summary())
+
+# Training
 # -------------------------
 
-# This method returns a helper function to compute cross entropy loss
-cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+if verbose:
+    print("Training GAN model...")
 
+# Adversarial ground truths
+real = np.ones((batch_size, 1))
+fake = np.zeros((batch_size, 1))
 
-def generator_loss(fake_output):
-    """ Compare the discriminator decisions on the generated image to an array of 1s
-    """
-    return cross_entropy(tf.ones_like(fake_output), fake_output)
+for e in range(epochs):
+    if verbose:
+        print("Epoch {}/{} ".format(e, epochs))
 
+    for i in range(len(x_train) // batch_size):
 
-def discriminator_loss(real_output, fake_output):
-    """ Compares the discriminator's predictions on real image to an array os 1s (0s for generated images)
-    """
-    real_loss = cross_entropy(tf.ones_like(real_output), real_output)
-    fake_loss = cross_entropy(tf.zeros_like(fake_output), fake_output)
-    total_loss = real_loss + fake_loss
-    return total_loss
+        # Training discriminator
+        # -------------------------
 
+        discriminator.trainable = True
 
-generator_optimizer = tf.keras.optimizers.Adam(1e-4)
-discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+        # We get real and generated images
+        real_images = x_train[i * batch_size : (i + 1) * batch_size]
+        random_vec = np.random.normal(
+            loc=0, scale=1, size=(batch_size, random_vec_size)
+        )
+        fake_images = generator.predict_on_batch(random_vec)
+
+        # We train and get the total loss
+        discr_real_metrics = discriminator.train_on_batch(x=real_images, y=real)
+        discr_fake_metrics = discriminator.train_on_batch(x=fake_images, y=fake)
+        discriminator_loss = 0.5 * (discr_real_metrics[0] + discr_fake_metrics[0])
+        discriminator_accuracy = 0.5 * (discr_real_metrics[1] + discr_fake_metrics[1])
+
+        if verbose:
+            print(
+                "     Batch {}/{}: discriminator_loss: {} - discriminator_accuracy: {} - ".format(
+                    i, batch_size, discriminator_loss, discriminator_accuracy
+                ),
+                end="",
+            )
+
+        # Training generator
+        # -------------------------
+
+        discriminator.trainable = False
+        generator_loss = gan.train_on_batch(x=random_vec, y=real)
+        if verbose:
+            print("generator_loss: {}".format(generator_loss))
