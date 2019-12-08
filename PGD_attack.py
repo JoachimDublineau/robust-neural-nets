@@ -4,7 +4,7 @@ from tensorflow.keras.losses import categorical_crossentropy
 import tensorflow as tf
 import src
 
-def generate_perturbation(img_size, eps, norm = 2):
+def generate_perturbation(img_size, eps):
     """
     Generates a random perturbation of the given size. The norm
     (l2 or l_inf) of this pertubation is inferior to eps.
@@ -18,7 +18,7 @@ def generate_perturbation(img_size, eps, norm = 2):
     In n*p
     """
     perturbation = np.random.random(size = img_size)
-    pert_norm = np.linalg.norm(perturbation, ord=norm)
+    pert_norm = np.linalg.norm(perturbation)
     if pert_norm > eps:
         perturbation *= np.random.random(eps)/pert_norm
     return perturbation
@@ -100,11 +100,12 @@ def generate_pgd_attack(model, loss, ref_image, y_image, eps,
     COMPUTATION TIME:
     Fast.
     """
-    curr_perturbation = eps*compute_grad(model, loss, 
-                                         ref_image, y_image)
-    curr_perturbation = projection(curr_perturbation, 
-                                   ref_image, eps)
-    for iter in range(nb_it-1):
+    # curr_perturbation = eps*compute_grad(model, loss, 
+    #                                      ref_image, y_image)
+    # curr_perturbation = projection(curr_perturbation, 
+    #                                ref_image, eps)
+    curr_perturbation = generate_perturbation(ref_image.shape, eps)
+    for iter in range(nb_it):
         curr_perturbated_img = ref_image + curr_perturbation
         signed_grad = compute_grad(model, loss, curr_perturbated_img, 
                                    y_image)
@@ -127,7 +128,7 @@ def generate_pgd_attack(model, loss, ref_image, y_image, eps,
 # image = x_train[0]
 # label = y_train[0]
 # model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
-# print(model.summary())
+# model.summary()
 # perturbation = generate_pgd_attack(model, categorical_crossentropy, 
 #                              image, label, 1)
 # print("Perturbation:")
@@ -202,12 +203,13 @@ def generate_pgd_attack_on_batch(model, loss, ref_images, y_images, eps,
     COMPUTATION TIME:
     Fast.
     """
-    curr_perturbations = eps*src.attacks.compute_signed_gradients(ref_images, 
-             y_images, model, loss, batch_size=batch_size, verbose=True)
+    # curr_perturbations = eps*src.attacks.compute_signed_gradients(ref_images, 
+    #          y_images, model, loss, batch_size=batch_size, verbose=True)
     
-    curr_perturbations = projection_on_batch(curr_perturbations, 
-                                    ref_images, eps)
-    
+    # curr_perturbations = projection_on_batch(curr_perturbations, 
+    #                                 ref_images, eps)
+    curr_perturbations = [generate_perturbation(ref_images[0].shape,eps) for i in range(batch_size)]
+    curr_perturbations = np.array(curr_perturbations)
     for iter in range(nb_it-1):
         curr_perturbated_imgs = ref_images + curr_perturbations
         signed_grad = src.attacks.compute_signed_gradients(curr_perturbated_imgs, 
@@ -252,12 +254,3 @@ def generate_pgd_attack_on_batch(model, loss, ref_images, y_images, eps,
 #                                         dtype = 'float32'))[0]))
 #     print()
 
-# import matplotlib.pyplot as plt
-# fig=plt.figure(figsize=(1, 3))
-# fig.add_subplot(1, 3, 1)
-# plt.imshow(image)
-# fig.add_subplot(1, 3, 2)
-# plt.imshow(perturbation)
-# fig.add_subplot(1, 3, 3)
-# plt.imshow(image + perturbation)
-# plt.show()
