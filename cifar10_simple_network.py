@@ -22,13 +22,6 @@ parser.add_argument(
     "-b", "--batch-size", help="Batch size. Default is 128", type=int, default=128
 )
 parser.add_argument(
-    "-d",
-    "--dropout",
-    help="Percentage of dropout. Default is 0.4",
-    type=float,
-    default=0.4,
-)
-parser.add_argument(
     "-v",
     "--verbose",
     help="If set, output details of the execution",
@@ -64,7 +57,6 @@ parser.add_argument(
 args = parser.parse_args()
 epochs = args.epochs
 batch_size = args.batch_size
-dropout = args.dropout
 verbose = args.verbose
 path_weights = args.weights
 output_log = args.output_log
@@ -111,7 +103,7 @@ if verbose:
 if verbose:
     print("Building model...")
 
-model = src.cifar10.build_simple_network(dropout)
+model = src.cifar10.build_simple_network()
 
 model.compile(
     loss=tf.keras.losses.categorical_crossentropy,
