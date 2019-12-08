@@ -113,46 +113,46 @@ def generate_pgd_attack(model, loss, ref_image, y_image, eps,
                                        eps)
     return curr_perturbation
 
-# # Test PGD Attack:
-# x_train, y_train, x_test, y_test = src.cifar10.load_data()
+# Test PGD Attack:
+x_train, y_train, x_test, y_test = src.cifar10.load_data()
 
-# x_train = x_train.astype("float32") / 255
-# x_test = x_test.astype("float32") / 255
+x_train = x_train.astype("float32") / 255
+x_test = x_test.astype("float32") / 255
 
-# y_train = tf.keras.utils.to_categorical(y_train, \
-#     num_classes = len(src.cifar10.labels))
-# y_test = tf.keras.utils.to_categorical(y_test, \
-#     num_classes = len(src.cifar10.labels))
+y_train = tf.keras.utils.to_categorical(y_train, \
+    num_classes = len(src.cifar10.labels))
+y_test = tf.keras.utils.to_categorical(y_test, \
+    num_classes = len(src.cifar10.labels))
 
-# image = x_train[0]
-# label = y_train[0]
-# model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
-# perturbation = generate_pgd_attack(model, categorical_crossentropy, 
-#                              image, label, 1)
-# print("Perturbation:")
-# # print(perturbation)
-# print("Norm:", np.linalg.norm(perturbation))
-# print()
-# print("Image:")
-# # print(image)
-# print("Norm:", np.linalg.norm(image))
-# print("Model prediction:", np.argmax(model(K.cast([image], 
-#                                            dtype = 'float32'))[0]))
-# print()
-# print("Perturbated image:")
-# print("Norm:", np.linalg.norm(image + perturbation))
-# print("Model prediction:", np.argmax(model(K.cast([image + perturbation], 
-#                                         dtype = 'float32'))[0]))
-# print()
+image = x_train[0]
+label = y_train[0]
+model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
+perturbation = generate_pgd_attack(model, categorical_crossentropy, 
+                             image, label, 1)
+print("Perturbation:")
+# print(perturbation)
+print("Norm:", np.linalg.norm(perturbation))
+print()
+print("Image:")
+# print(image)
+print("Norm:", np.linalg.norm(image))
+print("Model prediction:", np.argmax(model(K.cast([image], 
+                                           dtype = 'float32'))[0]))
+print()
+print("Perturbated image:")
+print("Norm:", np.linalg.norm(image + perturbation))
+print("Model prediction:", np.argmax(model(K.cast([image + perturbation], 
+                                        dtype = 'float32'))[0]))
+print()
 
-# import matplotlib.pyplot as plt
-# fig=plt.figure(figsize=(1, 3))
-# fig.add_subplot(1, 3, 1)
-# plt.imshow(image)
-# fig.add_subplot(1, 3, 2)
-# plt.imshow(perturbation)
-# fig.add_subplot(1, 3, 3)
-# plt.imshow(image + perturbation)
-# plt.show()
+import matplotlib.pyplot as plt
+fig=plt.figure(figsize=(1, 3))
+fig.add_subplot(1, 3, 1)
+plt.imshow(image)
+fig.add_subplot(1, 3, 2)
+plt.imshow(perturbation)
+fig.add_subplot(1, 3, 3)
+plt.imshow(image + perturbation)
+plt.show()
 
 ## CODING THE BATCH Calculation : 
