@@ -107,3 +107,44 @@ y_test = tf.keras.utils.to_categorical(y_test, num_classes=len(src.cifar10.label
 
 if verbose:
     print("Data is loaded.")
+
+# Build model
+# -------------------------
+
+
+def build_generator_model():
+    """ Generator model. Transforms random vector of size (100,) into a picture
+    """
+    generator_input = layers.Input(shape=(100,))
+
+    model = layers.Dense(8 * 8 * 128, use_bias=False)(generator_input)
+    model = layers.BatchNormalization()(model)
+    model = layers.LeakyReLU()(model)
+
+    model = layers.Reshape((8, 8, 128))(model)
+
+    # Upsmalpling: shape (None, 8, 8, 128) to shape (None, 8, 8, 64)
+    model = layers.Conv2DTranspose(
+        64, (5, 5), strides=(1, 1), padding="same", use_bias=False
+    )(model)
+    model = layers.BatchNormalization()(model)
+    model = layers.LeakyReLU()(model)
+
+    # Upsmalpling: shape (None, 8, 8, 64) to shape (None, 16, 16, 32)
+    model = layers.Conv2DTranspose(
+        32, (5, 5), strides=(2, 2), padding="same", use_bias=False
+    )(model)
+    model = layers.BatchNormalization()(model)
+    model = layers.LeakyReLU()(model)
+
+    # Upsmalpling: shape (None, 16, 16, 32) to shape (None, 32, 32, 3)
+    model = layers.Conv2DTranspose(
+        3, (5, 5), strides=(2, 2), padding="same", use_bias=False
+    )(model)
+
+    generator_model = Model(generator_input, model)
+    return generator_model
+
+
+# Train model
+# -------------------------
