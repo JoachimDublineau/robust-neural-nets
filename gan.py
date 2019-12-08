@@ -232,15 +232,15 @@ for e in range(epochs):
         discriminator.trainable = True
 
         # We get real and generated images
-        real_images = x_train[i * batch_size : (i + 1) * batch_size]
+        real_image = x_train[i * batch_size : (i + 1) * batch_size]
         random_vec = np.random.normal(
             loc=0, scale=1, size=(batch_size, random_vec_size)
         )
-        fake_images = generator.predict_on_batch(random_vec)
+        fake_image = generator.predict_on_batch(random_vec)
 
         # We train and get the total loss
-        discr_real_metrics = discriminator.train_on_batch(x=real_images, y=real)
-        discr_fake_metrics = discriminator.train_on_batch(x=fake_images, y=fake)
+        discr_real_metrics = discriminator.train_on_batch(x=real_image, y=real)
+        discr_fake_metrics = discriminator.train_on_batch(x=fake_image, y=fake)
         discriminator_loss = 0.5 * (discr_real_metrics[0] + discr_fake_metrics[0])
         discriminator_accuracy = 0.5 * (discr_real_metrics[1] + discr_fake_metrics[1])
 
