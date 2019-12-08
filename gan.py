@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.layers as layers
-from tensorflow.keras.callbacks import CSVLogger, ModelCheckpoint
 from tensorflow.keras.models import Model, load_model
 
 import src
@@ -16,7 +15,7 @@ tf.keras.backend.clear_session()
 # -------------------------
 
 parser = argparse.ArgumentParser(
-    description="Script to train a Generative Adversarial Network (GAN) for CIFAR10"
+    description="Script to train a Generative Adversarial Network (GAN) for CIFAR10 on 1 class"
 )
 parser.add_argument(
     "-e", "--epochs", help="Number of epochs. Default is 20", type=int, default=20
@@ -29,6 +28,13 @@ parser.add_argument(
     help="The size of the random vector given to generator model. Default is 100",
     type=int,
     default=100,
+)
+parser.add_argument(
+    "-c",
+    "--choosen-class",
+    help="The class on which the GAN will be trained. Default is 4",
+    type=int,
+    default=4,
 )
 parser.add_argument(
     "-v",
@@ -73,6 +79,7 @@ args = parser.parse_args()
 epochs = args.epochs
 batch_size = args.batch_size
 random_vec_size = args.random_vec
+choosen_class = args.choosen_class
 verbose = args.verbose
 path_weights = args.weights
 output_log = args.output_log
@@ -104,14 +111,10 @@ if gpu_id is not None:
 if verbose:
     print("Getting data...")
 
-x_train, y_train, x_test, y_test = src.cifar10.load_data()
-
-# Scale to [-1, 1]
-x_train = (x_train.astype("float32") - 127.5) / 127.5
-x_test = (x_test.astype("float32") - 127.5) / 127.5
-
-y_train = tf.keras.utils.to_categorical(y_train, num_classes=len(src.cifar10.labels))
-y_test = tf.keras.utils.to_categorical(y_test, num_classes=len(src.cifar10.labels))
+x_train, y_train, _, _ = src.cifar10.load_data()
+# We choose pictures of 1 one class
+x_train = x_train[y_train.flatten() == choosen_class]
+x_train = (x_train.astype("float32") - 127.5) / 127.5  # Scale to [-1, 1]
 
 if verbose:
     print("Data is loaded.")
@@ -134,21 +137,21 @@ def build_generator_model():
 
     model = layers.Reshape((8, 8, 128))(model)
 
-    # Upsmalpling: shape (None, 8, 8, 128) to shape (None, 8, 8, 64)
+    # Upsampling: shape (None, 8, 8, 128) to shape (None, 8, 8, 64)
     model = layers.Conv2DTranspose(
         64, (5, 5), strides=(1, 1), padding="same", use_bias=False
     )(model)
     model = layers.BatchNormalization()(model)
     model = layers.LeakyReLU()(model)
 
-    # Upsmalpling: shape (None, 8, 8, 64) to shape (None, 16, 16, 32)
+    # Upsampling: shape (None, 8, 8, 64) to shape (None, 16, 16, 32)
     model = layers.Conv2DTranspose(
         32, (5, 5), strides=(2, 2), padding="same", use_bias=False
     )(model)
     model = layers.BatchNormalization()(model)
     model = layers.LeakyReLU()(model)
 
-    # Upsmalpling: shape (None, 16, 16, 32) to shape (None, 32, 32, 3)
+    # Upsampling: shape (None, 16, 16, 32) to shape (None, 32, 32, 3)
     model = layers.Conv2DTranspose(
         3, (5, 5), strides=(2, 2), padding="same", use_bias=False, activation="tanh"
     )(model)
@@ -208,15 +211,20 @@ if verbose:
 if verbose:
     print("Training GAN model...")
 
+if path_weights is not None and os.path.exists(path_weights):
+    gan.load_weights(path_weights)
+
 # Adversarial ground truths
 real = np.ones((batch_size, 1))
 fake = np.zeros((batch_size, 1))
+
+iterations = len(x_train) // batch_size
 
 for e in range(epochs):
     if verbose:
         print("Epoch {}/{} ".format(e, epochs))
 
-    for i in range(len(x_train) // batch_size):
+    for i in range(iterations):
 
         # Training discriminator
         # -------------------------
@@ -239,7 +247,7 @@ for e in range(epochs):
         if verbose:
             print(
                 "     Batch {}/{}: discriminator_loss: {} - discriminator_accuracy: {} - ".format(
-                    i, batch_size, discriminator_loss, discriminator_accuracy
+                    i, iterations, discriminator_loss, discriminator_accuracy
                 ),
                 end="",
             )
@@ -251,3 +259,5 @@ for e in range(epochs):
         generator_loss = gan.train_on_batch(x=random_vec, y=real)
         if verbose:
             print("generator_loss: {}".format(generator_loss))
+
+    gan.save(path_weights)
