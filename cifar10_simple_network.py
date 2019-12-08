@@ -50,6 +50,12 @@ parser.add_argument(
     type=int,
     default=None,
 )
+parser.add_argument(
+    "--tf-log-level",
+    help="Tensorflow minimum cpp log level. Default is 0",
+    choices=["0", "1", "2", "3"],
+    default="0",
+)
 
 # Global parameters
 # -------------------------
@@ -61,6 +67,8 @@ verbose = args.verbose
 path_weights = args.weights
 output_log = args.output_log
 gpu_id = args.gpu
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = args.tf_log_level
 
 src.create_dir_if_not_found(src.models_dir)
 src.create_dir_if_not_found(src.results_dir)
