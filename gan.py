@@ -146,5 +146,27 @@ def build_generator_model():
     return generator_model
 
 
+def build_discriminator_model():
+    """ Discriminator model. Tells if a picture is real or artificial
+    """
+    discriminator_input = layers.Input(shape=(32, 32, 3))
+
+    model = layers.Conv2D(64, (5, 5), strides=(2, 2), padding="same")(
+        discriminator_input
+    )
+    model = layers.LeakyReLU()(model)
+    model = layers.Dropout(0.3)(model)
+
+    model = layers.Conv2D(128, (5, 5), strides=(2, 2), padding="same")(model)
+    model = layers.LeakyReLU()(model)
+    model = layers.Dropout(0.3)(model)
+
+    model = layers.Flatten()(model)
+    model = layers.Dense(1)(model)
+
+    discriminator_model = Model(discriminator_input, model)
+    return discriminator_model
+
+
 # Train model
 # -------------------------
