@@ -61,7 +61,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--save-img",
-    help="If set generated (artificial) images will be saved after each epoch under {}gan_generated_images_<epoch>.png".format(
+    help="If set generated images will be saved after each epoch under {}gan_generated_images_<epoch>.png".format(
         src.results_dir
     ),
     action="store_true",
@@ -240,15 +240,15 @@ for e in range(epochs):
         discriminator.trainable = True
 
         # We get real and generated images
-        real_image = x_train[i * batch_size : (i + 1) * batch_size]
-        random_vec = np.random.normal(
+        real_images = x_train[i * batch_size : (i + 1) * batch_size]
+        random_vecs = np.random.normal(
             loc=0, scale=1, size=(batch_size, random_vec_size)
         )
-        fake_image = generator.predict_on_batch(random_vec)
+        fake_images = generator.predict_on_batch(random_vecs)
 
         # We train and get the total loss
-        discr_real_metrics = discriminator.train_on_batch(x=real_image, y=real)
-        discr_fake_metrics = discriminator.train_on_batch(x=fake_image, y=fake)
+        discr_real_metrics = discriminator.train_on_batch(x=real_images, y=real)
+        discr_fake_metrics = discriminator.train_on_batch(x=fake_images, y=fake)
         discriminator_loss = 0.5 * (discr_real_metrics[0] + discr_fake_metrics[0])
         discriminator_accuracy = 0.5 * (discr_real_metrics[1] + discr_fake_metrics[1])
 
@@ -264,7 +264,7 @@ for e in range(epochs):
         # -------------------------
 
         discriminator.trainable = False
-        generator_loss = gan.train_on_batch(x=random_vec, y=real)
+        generator_loss = gan.train_on_batch(x=random_vecs, y=real)
         if verbose:
             print("generator_loss: {}".format(generator_loss))
 
