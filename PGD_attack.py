@@ -3,6 +3,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.losses import categorical_crossentropy
 import tensorflow as tf
 import src
+import time
 
 def generate_perturbation(img_size, eps):
     """
@@ -28,14 +29,14 @@ def generate_perturbation(img_size, eps):
 # print(perturbation)
 # print(np.linalg.norm(perturbation))
 
-def compute_grad(model, loss, image, label):
+def compute_grad(model, loss, images, labels):
     """
     Inspired from tensorflow core. 
     INPUTS:
     - model: tensorflow model
     - loss: tensorflow loss
-    - image: reference image
-    - label: one-hot encoding of the class
+    - images: reference images
+    - labels: one-hot encoding of the class
     OUTPUTS:
     - signed_grad: tensorflow tensor representing the gradient.
     Its dimension is equal to the one of image.
@@ -43,14 +44,14 @@ def compute_grad(model, loss, image, label):
     Fast
     """
     kast = lambda element: K.cast(element, dtype='float32')
-    x = kast([image])
+    x = kast(images)
     with tf.GradientTape() as tape:
         tape.watch(x)
-        prediction = model(x)
-        loss_ = loss(label, prediction)
-    gradient = tape.gradient(loss_, x)
-    signed_grad = tf.sign(gradient)
-    return signed_grad[0]
+        predictions = model(x)
+        loss_ = loss(labels, predictions)
+    gradients = tape.gradient(loss_, x)
+    signed_grads = tf.sign(gradients)
+    return signed_grads
 
 def projection(point, ref, eps):
     """
@@ -79,7 +80,7 @@ def projection(point, ref, eps):
 # print(projection(a, b, 1))
 
 def generate_pgd_attack(model, loss, ref_image, y_image, eps, 
-                        norm = 2, nb_it = 10):
+                        step = 0.1, threshold = 1e-3, nb_it_max = 20):
     """
     Computes a pgd attack for a given ref_image, model and loss.
     INPUTS:
@@ -90,28 +91,26 @@ def generate_pgd_attack(model, loss, ref_image, y_image, eps,
     - ref_image: array representing the input image.
     - y_image: label of the input image.
     - eps: maximal norm of the attack.
-    - norm: argument for the calculation of the norm with 
-    numpy.linalg.norm can be 2 or 'inf'. (Unused for now)
-    - nb_it: number of iterations for the calculation of the PGD 
-    attack.
+    - step: float gradient step
+    - threshold: float convergence threshold
+    - nb_it_max: max number of iterations.
     OUTPUTS:
     - curr_perturbation: array of the same shape as ref_image 
     representing the pdg attack.
     COMPUTATION TIME:
     Fast.
     """
-    # curr_perturbation = eps*compute_grad(model, loss, 
-    #                                      ref_image, y_image)
-    # curr_perturbation = projection(curr_perturbation, 
-    #                                ref_image, eps)
     curr_perturbation = generate_perturbation(ref_image.shape, eps)
-    for iter in range(nb_it):
-        curr_perturbated_img = ref_image + curr_perturbation
-        signed_grad = compute_grad(model, loss, curr_perturbated_img, 
-                                   y_image)
-        curr_perturbation += eps*signed_grad
-        curr_perturbation = projection(curr_perturbation, ref_image, 
-                                       eps)
+    signed_grad = compute_grad(model, loss, [ref_image], y_image)[0]
+    dist = threshold+1
+    i = 0 
+    while dist > threshold: 
+        i+=1     
+        prev_perturbation = curr_perturbation
+        curr_perturbation += step*signed_grad
+        curr_perturbation = projection(curr_perturbation, ref_image, eps)
+        dist = np.linalg.norm(prev_perturbation - curr_perturbation)
+        if i > nb_it_max: break
     return curr_perturbation
 
 # # Test PGD Attack:
@@ -128,9 +127,8 @@ def generate_pgd_attack(model, loss, ref_image, y_image, eps,
 # image = x_train[0]
 # label = y_train[0]
 # model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
-# model.summary()
 # perturbation = generate_pgd_attack(model, categorical_crossentropy, 
-#                              image, label, 1)
+#                              image, label, eps =1)
 # print("Perturbation:")
 # # print(perturbation)
 # print("Norm:", np.linalg.norm(perturbation))
@@ -182,41 +180,41 @@ def projection_on_batch(points, ref, eps):
     return np.array(projections) 
 
 def generate_pgd_attack_on_batch(model, loss, ref_images, y_images, eps, 
-                                 batch_size, norm = 2, nb_it = 10):
+                                 batch_size, step = 0.1, threshold=1e-3, 
+                                 nb_it_max = 20):
     """
-    Computes a pgd attack for a given ref_image, model and loss.
+    Computes a pgd attack for given ref_images, model and loss.
     INPUTS:
     - model: tensorflow.keras model compiled with the loss and having
     input shape = ref_image.shape.
     - loss: element of keras.losses or customized loss respecting
     the same structure.
-    - ref_image: array representing the input image.
-    - y_image: label of the input image.
+    - ref_images: array representing the input images.
+    - y_images: labels of the input images.
     - eps: maximal norm of the attack.
-    - norm: argument for the calculation of the norm with 
-    numpy.linalg.norm can be 2 or 'inf'. (Unused for now)
-    - nb_it: number of iterations for the calculation of the PGD 
-    attack.
+    - batch_size: int, size of ref_images
+    - step: float gradient step
+    - threshold: float convergence threshold 
+    - nb_it_max: int max number of iterations
     OUTPUTS:
     - curr_perturbation: array of the same shape as ref_image 
     representing the pdg attack.
     COMPUTATION TIME:
     Fast.
     """
-    # curr_perturbations = eps*src.attacks.compute_signed_gradients(ref_images, 
-    #          y_images, model, loss, batch_size=batch_size, verbose=True)
-    
-    # curr_perturbations = projection_on_batch(curr_perturbations, 
-    #                                 ref_images, eps)
     curr_perturbations = [generate_perturbation(ref_images[0].shape,eps) for i in range(batch_size)]
     curr_perturbations = np.array(curr_perturbations)
-    for iter in range(nb_it-1):
-        curr_perturbated_imgs = ref_images + curr_perturbations
-        signed_grad = src.attacks.compute_signed_gradients(curr_perturbated_imgs, 
-             y_images, model, loss, batch_size=batch_size, verbose=True)
-        curr_perturbations += eps*signed_grad
-        curr_perturbations = projection_on_batch(curr_perturbations, ref_images, 
-                                       eps)
+    signed_grads = compute_grad(model, loss, ref_images, y_images)
+    dist = threshold + 1
+    count = 0
+    while dist > threshold:
+        count += 1
+        prev_perturbations = curr_perturbations        
+        curr_perturbations += step*signed_grads
+        curr_perturbations = projection_on_batch(curr_perturbations, ref_images, eps)
+        diff = curr_perturbations - prev_perturbations
+        dist = np.linalg.norm(diff)/batch_size
+        if count > nb_it_max: break
     return curr_perturbations
 
 # # Test PGD Attack on batch:
@@ -234,9 +232,8 @@ def generate_pgd_attack_on_batch(model, loss, ref_images, y_images, eps,
 # images = x_train[:batch_size]
 # labels = y_train[:batch_size]
 # model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
-# model.summary()
 # perturbations = generate_pgd_attack_on_batch(model, categorical_crossentropy, 
-#                              images, labels, 1, batch_size=batch_size)
+#                              images, labels, eps = 1, batch_size=batch_size)
 # print()
 # for i in range(batch_size):
 #     print("For image n°", i)
@@ -253,9 +250,59 @@ def generate_pgd_attack_on_batch(model, loss, ref_images, y_images, eps,
 #     print("Model prediction:", np.argmax(model(K.cast([images[i] + perturbations[i]], 
 #                                         dtype = 'float32'))[0]))
 #     print()
+def generate_pgd_attack_on_batch_accelerated(model, loss, ref_images, y_images, eps, 
+                                 batch_size, step = 0.1, nb_it = 5):
+    """
+    Computes a pgd attack for given ref_images, model and loss.
+    INPUTS:
+    - model: tensorflow.keras model compiled with the loss and having
+    input shape = ref_image.shape.
+    - loss: element of keras.losses or customized loss respecting
+    the same structure.
+    - ref_images: array representing the input images.
+    - y_images: labels of the input images.
+    - eps: maximal norm of the attack.
+    - batch_size: int, size of ref_images
+    - step: float gradient step
+    - nb_it: int number of iterations
+    OUTPUTS:
+    - curr_perturbation: array of the same shape as ref_image 
+    representing the pdg attack.
+    COMPUTATION TIME:
+    Fast.
+    """
+    curr_perturbations = [generate_perturbation(ref_images[0].shape,eps) for i in range(batch_size)]
+    curr_perturbations = np.array(curr_perturbations)
+    signed_grads = compute_grad(model, loss, ref_images, y_images)
+    for i in range(nb_it):      
+        curr_perturbations += step*signed_grads
+        curr_perturbations = projection_on_batch(curr_perturbations, ref_images, eps)
+    return curr_perturbations
 
-def generate_pgd_attacks(model, loss, x, y, eps, batch_size):
-    perturbations = []
+def generate_pgd_attacks(model, loss, x, y, eps, batch_size,
+                         step = 0.1, threshold=1e-3, nb_it_max = 20,
+                         accelerated = True):
+    """
+    Computes a pgd attacks for a given x, model and loss.
+    INPUTS:
+    - model: tensorflow.keras model compiled with the loss and having
+    input shape = ref_image.shape.
+    - loss: element of keras.losses or customized loss respecting
+    the same structure.
+    - x: array representing the input images.
+    - y: label of the input images.
+    - eps: maximal norm of the attack.
+    - step: float gradient step
+    - threshold: float convergence threshold 
+    - nb_it_max: float max number of iterations
+    attack.
+    OUTPUTS:
+    - tab_perturbations: array of the same shape as x 
+    representing the pdg attacks.
+    COMPUTATION TIME:
+    Fast proportionnal to the number of images.
+    """
+    tab_perturbations = []
     nb_batch = len(x) // batch_size + 1
     for i in range(nb_batch):
         end = 0
@@ -263,31 +310,52 @@ def generate_pgd_attacks(model, loss, x, y, eps, batch_size):
             end = len(x)
         else:
             end = (i+1)*batch_size
-        x_batch = x[i*batch_size,(i+1)*batch_size]
-        y_batch = y[i*batch_size,(i+1)*batch_size]
-        perturbations += generate_pgd_attack_on_batch(model, loss, x_batch,
-            x_batch, eps, batch_size)
-    perturbations = np.array(perturbations, dtype = np.float32)
-    return perturbations
+        x_batch = x[i*batch_size:end]
+        y_batch = y[i*batch_size:end]
+        size = end - i*batch_size
+        if size == 0:
+            break
+        print("Computing Attacks for batch", i, " Images", i*batch_size, "to", end)
+        if accelerated:
+            perturbations = generate_pgd_attack_on_batch_accelerated(model, loss, x_batch,
+                y_batch, eps, size, step, nb_it = 3)
+        if not accelerated:
+            perturbations = generate_pgd_attack_on_batch(model, loss, x_batch,
+                y_batch, eps, size, step, threshold, nb_it_max)
+        for perturbation in perturbations:
+            tab_perturbations.append(perturbation)
+    tab_perturbations = np.array(tab_perturbations, dtype = np.float32)
+    return tab_perturbations
 
-# Test PGD Attack on batch:
-x_train, y_train, x_test, y_test = src.cifar10.load_data()
+# # Test PGD Attack on batch:
+# x_train, y_train, x_test, y_test = src.cifar10.load_data()
 
-x_train = x_train.astype("float32") / 255
-x_test = x_test.astype("float32") / 255
+# x_train = x_train.astype("float32") / 255
+# x_test = x_test.astype("float32") / 255
 
-y_train = tf.keras.utils.to_categorical(y_train, \
-    num_classes = len(src.cifar10.labels))
-y_test = tf.keras.utils.to_categorical(y_test, \
-    num_classes = len(src.cifar10.labels))
+# y_train = tf.keras.utils.to_categorical(y_train, \
+#     num_classes = len(src.cifar10.labels))
+# y_test = tf.keras.utils.to_categorical(y_test, \
+#     num_classes = len(src.cifar10.labels))
 
-batch_size = 10
-random_indexes = np.random.choice(x_test.shape[0], 100)
+# batch_size = 10
+# random_indexes = np.random.choice(x_test.shape[0], 100)
 
-images = x_train[random_indexes]
-labels = y_train[random_indexes]
-model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
-model.summary()
-perturbations = generate_pgd_attacks(model, categorical_crossentropy, 
-                             images, labels, 1, batch_size=batch_size)
-print(perturbations.shape)
+# images = x_train[random_indexes]
+# labels = y_train[random_indexes]
+# print(images.shape)
+# print(labels.shape)
+# model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
+# t0 = time.time()
+# perturbations = generate_pgd_attacks(model, categorical_crossentropy, 
+#                              images, labels, eps=1, batch_size=batch_size, step= 0.1,
+#                              threshold=1e-3, nb_it_max=20, accelerated=True)
+# t1 = time.time()
+# print("Computation time for 100 images:", t1-t0)
+# perturbations = generate_pgd_attacks(model, categorical_crossentropy, 
+#                              images, labels, eps=1, batch_size=batch_size, step= 0.1,
+#                              threshold=1e-3, nb_it_max=20, accelerated=False)
+# t2 = time.time()
+# print("Computation time for 100 images:", t2-t1)
+# print(perturbations[1])
+
