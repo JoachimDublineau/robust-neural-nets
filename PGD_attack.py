@@ -254,3 +254,40 @@ def generate_pgd_attack_on_batch(model, loss, ref_images, y_images, eps,
 #                                         dtype = 'float32'))[0]))
 #     print()
 
+def generate_pgd_attacks(model, loss, x, y, eps, batch_size):
+    perturbations = []
+    nb_batch = len(x) // batch_size + 1
+    for i in range(nb_batch):
+        end = 0
+        if i == nb_batch - 1:
+            end = len(x)
+        else:
+            end = (i+1)*batch_size
+        x_batch = x[i*batch_size,(i+1)*batch_size]
+        y_batch = y[i*batch_size,(i+1)*batch_size]
+        perturbations += generate_pgd_attack_on_batch(model, loss, x_batch,
+            x_batch, eps, batch_size)
+    perturbations = np.array(perturbations, dtype = np.float32)
+    return perturbations
+
+# Test PGD Attack on batch:
+x_train, y_train, x_test, y_test = src.cifar10.load_data()
+
+x_train = x_train.astype("float32") / 255
+x_test = x_test.astype("float32") / 255
+
+y_train = tf.keras.utils.to_categorical(y_train, \
+    num_classes = len(src.cifar10.labels))
+y_test = tf.keras.utils.to_categorical(y_test, \
+    num_classes = len(src.cifar10.labels))
+
+batch_size = 10
+random_indexes = np.random.choice(x_test.shape[0], 100)
+
+images = x_train[random_indexes]
+labels = y_train[random_indexes]
+model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
+model.summary()
+perturbations = generate_pgd_attacks(model, categorical_crossentropy, 
+                             images, labels, 1, batch_size=batch_size)
+print(perturbations.shape)
