@@ -245,7 +245,7 @@ for e in range(epochs):
     if verbose:
         print("Epoch {}/{} ".format(e, epochs))
 
-    for i in range(iterations):
+    for i in range(1):
 
         # Training discriminator
         # -------------------------
@@ -309,7 +309,7 @@ for e in range(epochs):
                 fake_image = generator.predict_on_batch([random_vec, label])[0]
                 fake_image = 0.5 * fake_image + 0.5  # Rescale
 
-                axs[k, l].title(src.cifar10.labels[img_label])
+                axs[k, l].title.set_text(src.cifar10.labels[img_label])
                 axs[k, l].imshow(fake_image)
                 axs[k, l].axis("off")
                 img_label += 1
