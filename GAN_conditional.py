@@ -243,9 +243,9 @@ iterations = len(x_train) // batch_size
 
 for e in range(epochs):
     if verbose:
-        print("Epoch {}/{} ".format(e, epochs))
+        print("Epoch {}/{} :".format(e, epochs), end="")
 
-    for i in range(1):
+    for i in range(iterations):
 
         # Training discriminator
         # -------------------------
@@ -275,10 +275,10 @@ for e in range(epochs):
         discriminator_loss = 0.5 * (discr_real_metrics[0] + discr_fake_metrics[0])
         discriminator_accuracy = 0.5 * (discr_real_metrics[1] + discr_fake_metrics[1])
 
-        if verbose:
+        if verbose and i == iterations - 1:
             print(
-                "     Batch {}/{}: discriminator_loss: {} - discriminator_accuracy: {} - ".format(
-                    i, iterations, discriminator_loss, discriminator_accuracy
+                " discriminator_loss: {} - discriminator_accuracy: {} - ".format(
+                    discriminator_loss, discriminator_accuracy
                 ),
                 end="",
             )
@@ -288,7 +288,7 @@ for e in range(epochs):
 
         discriminator.trainable = False
         generator_loss = gan.train_on_batch(x=[random_vecs, fake_labels], y=real)
-        if verbose:
+        if verbose and i == iterations - 1:
             print("generator_loss: {}".format(generator_loss))
 
     gan.save(path_weights)
