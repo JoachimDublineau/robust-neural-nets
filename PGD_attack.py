@@ -24,11 +24,6 @@ def generate_perturbation(img_size, eps):
         perturbation *= np.random.random(eps)/pert_norm
     return perturbation
 
-# # Test generate_perturbation
-# perturbation = generate_perturbation((10,10), 1, norm = "l2")
-# print(perturbation)
-# print(np.linalg.norm(perturbation))
-
 def compute_grad(model, loss, images, labels):
     """
     Inspired from tensorflow core. 
@@ -72,13 +67,6 @@ def projection(point, ref, eps):
         return point
     return eps*(point - ref)/dist 
 
-# # Test projection:
-# a = np.array([2,2], dtype = np.float32)
-# b = np.array([1,1], dtype = np.float32)
-# print(a-b)
-# print(np.linalg.norm(a-b, ord=2))
-# print(projection(a, b, 1))
-
 def generate_pgd_attack(model, loss, ref_image, y_image, eps, 
                         step = 0.1, threshold = 1e-3, nb_it_max = 20):
     """
@@ -113,49 +101,6 @@ def generate_pgd_attack(model, loss, ref_image, y_image, eps,
         if i > nb_it_max: break
     return curr_perturbation
 
-# # Test PGD Attack:
-# x_train, y_train, x_test, y_test = src.cifar10.load_data()
-
-# x_train = x_train.astype("float32") / 255
-# x_test = x_test.astype("float32") / 255
-
-# y_train = tf.keras.utils.to_categorical(y_train, \
-#     num_classes = len(src.cifar10.labels))
-# y_test = tf.keras.utils.to_categorical(y_test, \
-#     num_classes = len(src.cifar10.labels))
-
-# image = x_train[0]
-# label = y_train[0]
-# model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
-# perturbation = generate_pgd_attack(model, categorical_crossentropy, 
-#                              image, label, eps =1)
-# print("Perturbation:")
-# # print(perturbation)
-# print("Norm:", np.linalg.norm(perturbation))
-# print()
-# print("Image:")
-# # print(image)
-# print("Norm:", np.linalg.norm(image))
-# print("Model prediction:", np.argmax(model(K.cast([image], 
-#                                            dtype = 'float32'))[0]))
-# print()
-# print("Perturbated image:")
-# print("Norm:", np.linalg.norm(image + perturbation))
-# print("Model prediction:", np.argmax(model(K.cast([image + perturbation], 
-#                                         dtype = 'float32'))[0]))
-# print()
-
-# import matplotlib.pyplot as plt
-# fig=plt.figure(figsize=(1, 3))
-# fig.add_subplot(1, 3, 1)
-# plt.imshow(image)
-# fig.add_subplot(1, 3, 2)
-# plt.imshow(perturbation)
-# fig.add_subplot(1, 3, 3)
-# plt.imshow(image + perturbation)
-# plt.show()
-
-## CODING THE BATCH Calculation : 
 def projection_on_batch(points, ref, eps):
     """
     Computes the projection of the point vector on the ball
@@ -217,39 +162,7 @@ def generate_pgd_attack_on_batch(model, loss, ref_images, y_images, eps,
         if count > nb_it_max: break
     return curr_perturbations
 
-# # Test PGD Attack on batch:
-# x_train, y_train, x_test, y_test = src.cifar10.load_data()
 
-# x_train = x_train.astype("float32") / 255
-# x_test = x_test.astype("float32") / 255
-
-# y_train = tf.keras.utils.to_categorical(y_train, \
-#     num_classes = len(src.cifar10.labels))
-# y_test = tf.keras.utils.to_categorical(y_test, \
-#     num_classes = len(src.cifar10.labels))
-
-# batch_size = 10
-# images = x_train[:batch_size]
-# labels = y_train[:batch_size]
-# model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
-# perturbations = generate_pgd_attack_on_batch(model, categorical_crossentropy, 
-#                              images, labels, eps = 1, batch_size=batch_size)
-# print()
-# for i in range(batch_size):
-#     print("For image n°", i)
-#     print("Perturbation:")
-#     # print(perturbations[i])
-#     print("Norm of pertubation:", np.linalg.norm(perturbations[i]))
-#     print("Image:")
-#     # print(images[i])
-#     print("Norm:", np.linalg.norm(images[i]))
-#     print("Model prediction:", np.argmax(model(K.cast([images[i]], 
-#                                            dtype = 'float32'))[0]))
-#     print("Perturbated image:")
-#     print("Norm:", np.linalg.norm(images[i] + perturbations[i]))
-#     print("Model prediction:", np.argmax(model(K.cast([images[i] + perturbations[i]], 
-#                                         dtype = 'float32'))[0]))
-#     print()
 def generate_pgd_attack_on_batch_accelerated(model, loss, ref_images, y_images, eps, 
                                  batch_size, step = 0.1, nb_it = 5):
     """
@@ -281,7 +194,7 @@ def generate_pgd_attack_on_batch_accelerated(model, loss, ref_images, y_images, 
 
 def generate_pgd_attacks(model, loss, x, y, eps, batch_size,
                          step = 0.1, threshold=1e-3, nb_it_max = 20,
-                         accelerated = True):
+                         accelerated = False):
     """
     Computes a pgd attacks for a given x, model and loss.
     INPUTS:
@@ -326,36 +239,4 @@ def generate_pgd_attacks(model, loss, x, y, eps, batch_size,
             tab_perturbations.append(perturbation)
     tab_perturbations = np.array(tab_perturbations, dtype = np.float32)
     return tab_perturbations
-
-# # Test PGD Attack on batch:
-# x_train, y_train, x_test, y_test = src.cifar10.load_data()
-
-# x_train = x_train.astype("float32") / 255
-# x_test = x_test.astype("float32") / 255
-
-# y_train = tf.keras.utils.to_categorical(y_train, \
-#     num_classes = len(src.cifar10.labels))
-# y_test = tf.keras.utils.to_categorical(y_test, \
-#     num_classes = len(src.cifar10.labels))
-
-# batch_size = 10
-# random_indexes = np.random.choice(x_test.shape[0], 100)
-
-# images = x_train[random_indexes]
-# labels = y_train[random_indexes]
-# print(images.shape)
-# print(labels.shape)
-# model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
-# t0 = time.time()
-# perturbations = generate_pgd_attacks(model, categorical_crossentropy, 
-#                              images, labels, eps=1, batch_size=batch_size, step= 0.1,
-#                              threshold=1e-3, nb_it_max=20, accelerated=True)
-# t1 = time.time()
-# print("Computation time for 100 images:", t1-t0)
-# perturbations = generate_pgd_attacks(model, categorical_crossentropy, 
-#                              images, labels, eps=1, batch_size=batch_size, step= 0.1,
-#                              threshold=1e-3, nb_it_max=20, accelerated=False)
-# t2 = time.time()
-# print("Computation time for 100 images:", t2-t1)
-# print(perturbations[1])
 
