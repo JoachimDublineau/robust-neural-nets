@@ -1,4 +1,5 @@
 import argparse
+import multiprocessing
 import os
 
 import matplotlib.pyplot as plt
@@ -6,15 +7,75 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.callbacks import CSVLogger, ModelCheckpoint
 from tensorflow.keras.models import load_model
+import tqdm
+from tensorflow.keras.utils import Sequence
 
 import src
 
 tf.keras.backend.clear_session()
 
+# Train methods functions
+# -------------------------
+
+
+def train_method_simple():
+    model.fit(
+        x_train,
+        y_train,
+        batch_size=batch_size,
+        validation_data=(x_test, y_test),
+        epochs=epochs,
+        verbose=int(verbose),
+        callbacks=[csv_logger, checkpoint],
+    )
+
+    if verbose:
+        print("Model is trained.")
+
+
+def train_method_defense_fgsm():
+    optimizer = model.optimizer
+    loss_fn = model.loss
+
+    test_ds = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(batch_size)
+
+    metrics = model.metrics
+
+    print(metrics)
+    for epoch in range(epochs):
+        if verbose:
+            print('Epoch {}/{}'.format(epoch + 1, epochs))
+
+        """
+        signed_gradients = src.attacks.compute_signed_gradients(x_train, y_train, model, loss_fn, batch_size=batch_size, verbose=verbose)
+        x = np.clip(x_train + epsilon * signed_gradients, 0.0, 1.0)
+        y = y_train
+
+        train_ds = tf.data.Dataset.from_tensor_slices((x, y)).shuffle(1024).batch(batch_size)
+
+        iterator = enumerate(train_ds)
+        if verbose:
+            iterator = tqdm.tqdm(iterator, desc='Processing batches', total=x.shape[0] // batch_size + 1, unit='batch')
+
+        for set, (batch_x, batch_y) in iterator:
+            with tf.GradientTape() as tape:
+                predictions = model(batch_x)
+                loss_value = loss_fn(batch_y, predictions)
+
+            grads = tape.gradient(loss_value, model.trainable_weights)
+            optimizer.apply_gradients(zip(grads, model.trainable_weights))
+            """
+
+train_methods = {
+    "simple": train_method_simple,
+    "defense_fgsm": train_method_defense_fgsm
+}
+
 # Parser configuration
 # -------------------------
 
-parser = argparse.ArgumentParser(description="Script to train a simple CIFAR10 network")
+parser = argparse.ArgumentParser(
+    description="Script to train a simple CIFAR10 network")
 parser.add_argument(
     "-e", "--epochs", help="Number of epochs. Default is 20", type=int, default=20
 )
@@ -57,6 +118,9 @@ parser.add_argument(
     type=int,
     default=None,
 )
+parser.add_argument("--train-method", default="simple",
+                    choices=train_methods.keys(), help="The train method to use. Default is simple")
+parser.add_argument("--epsilon", type=float, help="The value of epsilon to use while training with 'defense_fgsm' traning method")
 
 # Global parameters
 # -------------------------
@@ -69,6 +133,8 @@ verbose = args.verbose
 path_weights = args.weights
 output_log = args.output_log
 gpu_id = args.gpu
+train_method = args.train_method
+epsilon = args.epsilon
 
 src.create_dir_if_not_found(src.models_dir)
 src.create_dir_if_not_found(src.results_dir)
@@ -99,8 +165,10 @@ x_train, y_train, x_test, y_test = src.cifar10.load_data()
 x_train = x_train.astype("float32") / 255
 x_test = x_test.astype("float32") / 255
 
-y_train = tf.keras.utils.to_categorical(y_train, num_classes=len(src.cifar10.labels))
-y_test = tf.keras.utils.to_categorical(y_test, num_classes=len(src.cifar10.labels))
+y_train = tf.keras.utils.to_categorical(
+    y_train, num_classes=len(src.cifar10.labels))
+y_test = tf.keras.utils.to_categorical(
+    y_test, num_classes=len(src.cifar10.labels))
 
 if verbose:
     print("Data is loaded.")
@@ -133,20 +201,10 @@ if path_weights is not None and os.path.exists(path_weights):
     model.load_weights(path_weights)
 
 csv_logger = CSVLogger(output_log, append=True, separator=";")
-checkpoint = ModelCheckpoint(path_weights, verbose=int(verbose), save_freq="epoch")
+checkpoint = ModelCheckpoint(
+    path_weights, verbose=int(verbose), save_freq="epoch")
 
-history = model.fit(
-    x_train,
-    y_train,
-    batch_size=batch_size,
-    validation_data=(x_test, y_test),
-    epochs=epochs,
-    verbose=int(verbose),
-    callbacks=[csv_logger, checkpoint],
-)
-
-if verbose:
-    print("Model is trained.")
+train_methods[train_method]()
 
 if verbose:
     print("Saving weights...")
