@@ -1,15 +1,14 @@
 import argparse
-import multiprocessing
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+import tensorflow.keras.callbacks as cbks
+import tqdm
 from tensorflow.keras.callbacks import CSVLogger, ModelCheckpoint
 from tensorflow.keras.models import load_model
-import tqdm
 from tensorflow.keras.utils import Sequence
-import tensorflow.keras.callbacks as cbks
 
 import src
 
@@ -17,6 +16,7 @@ tf.keras.backend.clear_session()
 
 # argparse specific type
 # -------------------------
+
 
 def zero_one_float(x):
     try:
@@ -69,8 +69,10 @@ def train_method_defense_fgsm():
     }
 
     # create datasets
-    train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).shuffle(x_train.shape[0]).batch(batch_size)
-    validation_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(batch_size)
+    train_dataset = tf.data.Dataset.from_tensor_slices(
+        (x_train, y_train)).shuffle(x_train.shape[0]).batch(batch_size)
+    validation_dataset = tf.data.Dataset.from_tensor_slices(
+        (x_test, y_test)).batch(batch_size)
 
     # prepare callbacks
     callback_metrics = list(epoch_metrics.keys())
@@ -114,8 +116,10 @@ def train_method_defense_fgsm():
                 callback.on_batch_begin(batch_index, logs=batch_logs)
 
             # compute signed gradients for batch x and create adversarial images
-            batch_x_signed_gradients = src.attacks.compute_signed_gradients(batch_x, batch_y, model, tf.keras.losses.categorical_crossentropy, batch_size=batch_size, verbose=False)
-            batch_x_adversarial = tf.keras.backend.clip(batch_x + epsilon * batch_x_signed_gradients, 0, 1)
+            batch_x_signed_gradients = src.attacks.compute_signed_gradients(
+                batch_x, batch_y, model, tf.keras.losses.categorical_crossentropy, batch_size=batch_size, verbose=False)
+            batch_x_adversarial = tf.keras.backend.clip(
+                batch_x + epsilon * batch_x_signed_gradients, 0, 1)
 
             # forward step
             with tf.GradientTape() as tape:
@@ -123,9 +127,11 @@ def train_method_defense_fgsm():
                 predictions_adversarials = model(batch_x_adversarial)
 
                 loss_value = loss_fn(batch_y, predictions)
-                loss_value_adversarial = loss_fn(batch_y, predictions_adversarials)
+                loss_value_adversarial = loss_fn(
+                    batch_y, predictions_adversarials)
 
-                loss_value = alpha * loss_value + (1 - alpha) * loss_value_adversarial
+                loss_value = alpha * loss_value + \
+                    (1 - alpha) * loss_value_adversarial
 
             # backward step
             grads = tape.gradient(loss_value, model.trainable_weights)
@@ -165,6 +171,7 @@ def train_method_defense_fgsm():
 
     for callback in callbacks:
         callback.on_train_end()
+
 
 train_methods = {
     "simple": train_method_simple,
@@ -214,8 +221,10 @@ parser.add_argument(
 
 parser.add_argument("--train-method", default="simple",
                     choices=train_methods.keys(), help="The train method to use. Default is simple")
-parser.add_argument("--epsilon", type=float, help="The value of epsilon to use while training with 'defense_fgsm' traning method")
-parser.add_argument("--alpha", type=zero_one_float, help="The value of alpha to use while training with 'defense_fgsm' traning method. Must be in range [0, 1]. Default is 0.5", default=0.5)
+parser.add_argument("--epsilon", type=float,
+                    help="The value of epsilon to use while training with 'defense_fgsm' traning method")
+parser.add_argument("--alpha", type=zero_one_float,
+                    help="The value of alpha to use while training with 'defense_fgsm' traning method. Must be in range [0, 1]. Default is 0.5", default=0.5)
 parser.add_argument(
     "--tf-log-level",
     help="Tensorflow minimum cpp log level. Default is 0",
