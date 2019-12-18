@@ -58,7 +58,7 @@ To get more info, run the following command:
 
     `python fgsm_log_to_graphs.py`
 
-### `PGD_attack.py'
+### `PGD_attack.py`
 
 This script contains the required tools to create PGD attacks on a single image as well as on a set of images.
 The most important function is generate_pgd_attacks which can be executed with the following command:

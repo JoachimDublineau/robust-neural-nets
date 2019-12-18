@@ -22,13 +22,6 @@ parser.add_argument(
     "-b", "--batch-size", help="Batch size. Default is 128", type=int, default=128
 )
 parser.add_argument(
-    "-d",
-    "--dropout",
-    help="Percentage of dropout. Default is 0.4",
-    type=float,
-    default=0.4,
-)
-parser.add_argument(
     "-v",
     "--verbose",
     help="If set, output details of the execution",
@@ -57,6 +50,12 @@ parser.add_argument(
     type=int,
     default=None,
 )
+parser.add_argument(
+    "--tf-log-level",
+    help="Tensorflow minimum cpp log level. Default is 0",
+    choices=["0", "1", "2", "3"],
+    default="0",
+)
 
 # Global parameters
 # -------------------------
@@ -64,11 +63,12 @@ parser.add_argument(
 args = parser.parse_args()
 epochs = args.epochs
 batch_size = args.batch_size
-dropout = args.dropout
 verbose = args.verbose
 path_weights = args.weights
 output_log = args.output_log
 gpu_id = args.gpu
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = args.tf_log_level
 
 src.create_dir_if_not_found(src.models_dir)
 src.create_dir_if_not_found(src.results_dir)
@@ -111,7 +111,7 @@ if verbose:
 if verbose:
     print("Building model...")
 
-model = src.cifar10.build_simple_network(dropout)
+model = src.cifar10.build_simple_network()
 
 model.compile(
     loss=tf.keras.losses.categorical_crossentropy,
