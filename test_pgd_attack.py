@@ -6,7 +6,7 @@ import time
 from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras import backend as K 
 
-# Test generate_perturbation
+# # Test generate_perturbation
 perturbation = generate_perturbation((10,10), 1)
 print(perturbation)
 print(np.linalg.norm(perturbation))
@@ -18,7 +18,7 @@ print(a-b)
 print(np.linalg.norm(a-b, ord=2))
 print(projection(a, b, 1))
 
-# Test PGD Attack:
+# # Test PGD Attack:
 x_train, y_train, x_test, y_test = src.cifar10.load_data()
 
 x_train = x_train.astype("float32") / 255
@@ -60,7 +60,7 @@ fig.add_subplot(1, 3, 3)
 plt.imshow(image + perturbation)
 plt.show()
 
-# Test PGD Attack on batch:
+# # Test PGD Attack on batch:
 x_train, y_train, x_test, y_test = src.cifar10.load_data()
 
 x_train = x_train.astype("float32") / 255
@@ -74,7 +74,6 @@ y_test = tf.keras.utils.to_categorical(y_test, \
 batch_size = 10
 images = x_train[:batch_size]
 labels = y_train[:batch_size]
-model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
 perturbations = generate_pgd_attack_on_batch(model, categorical_crossentropy, 
                              images, labels, eps = 1, batch_size=batch_size)
 print()
@@ -113,7 +112,6 @@ images = x_train[random_indexes]
 labels = y_train[random_indexes]
 print(images.shape)
 print(labels.shape)
-model = tf.keras.models.load_model("models/cifar10_simple_model_73_acc.h5")
 t0 = time.time()
 perturbations = generate_pgd_attacks(model, categorical_crossentropy, 
                              images, labels, eps=1, batch_size=batch_size, step= 0.1,
@@ -126,3 +124,22 @@ perturbations = generate_pgd_attacks(model, categorical_crossentropy,
 t2 = time.time()
 print("Computation time for 100 images:", t2-t1)
 print(perturbations[1])
+
+def compute_efficiency(model, loss, x, y, eps, batch_size):
+    attacks, perturbations, images, labels = generate_pgd_attacks_for_test(model, loss, x, y, eps, batch_size)
+    predictions_on_pert = np.argmax(model(K.cast(images + perturbations, 
+                                        dtype = 'float32')), axis=1)
+    predictions = np.argmax(model(K.cast(images,dtype = 'float32')), axis=1)
+    nb_mistakes = np.count_nonzero(predictions_on_pert-predictions)
+    damages = nb_mistakes/images.shape[0]
+    return damages
+tab = []
+tab_eps = []
+for i in range(10):
+    eps = 0.1 + i*0.2
+    tab_eps.append(eps)
+    tab.append(compute_efficiency(model, categorical_crossentropy, images, labels, eps, batch_size))
+plt.xlabel("Eps")
+plt.ylabel("Attack efficiency")
+plt.plot(tab_eps, tab)
+plt.show()

@@ -39,11 +39,8 @@ def load_data():
 # -------------------------
 
 
-def build_simple_network(dropout):
+def build_simple_network():
     """ Function to build a simple network for CIFAR10
-
-    Args:
-        dropout (int): the value of dropout
 
     Returns:
         cifar10_network: the final model
@@ -60,7 +57,7 @@ def build_simple_network(dropout):
     )(X)
     network = klayers.BatchNormalization()(network)
     network = klayers.Activation("relu")(network)
-    network = klayers.Dropout(dropout)(network)
+    network = klayers.Dropout(0.4)(network)
 
     network = klayers.Conv2D(
         32,
@@ -72,7 +69,7 @@ def build_simple_network(dropout):
     )(network)
     network = klayers.BatchNormalization()(network)
     network = klayers.Activation("relu")(network)
-    network = klayers.Dropout(dropout)(network)
+    network = klayers.Dropout(0.4)(network)
 
     network = klayers.Conv2D(
         32,
@@ -84,7 +81,7 @@ def build_simple_network(dropout):
     )(network)
     network = klayers.BatchNormalization()(network)
     network = klayers.Activation("relu")(network)
-    network = klayers.Dropout(dropout)(network)
+    network = klayers.Dropout(0.4)(network)
 
     network = klayers.AveragePooling2D()(network)
     network = klayers.Flatten()(network)

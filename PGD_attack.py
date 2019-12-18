@@ -21,7 +21,7 @@ def generate_perturbation(img_size, eps):
     perturbation = np.random.random(size = img_size)
     pert_norm = np.linalg.norm(perturbation)
     if pert_norm > eps:
-        perturbation *= np.random.random(eps)/pert_norm
+        perturbation *= eps*np.random.random()/pert_norm
     return perturbation
 
 def compute_grad(model, loss, images, labels):
@@ -196,7 +196,8 @@ def generate_pgd_attacks(model, loss, x, y, eps, batch_size,
                          step = 0.1, threshold=1e-3, nb_it_max = 20,
                          accelerated = False):
     """
-    Computes a pgd attacks for a given x, model and loss.
+    Computes a pgd attacks for a given x, model and loss. Removes the images
+    where the model doesn't make good predictions already.
     INPUTS:
     - model: tensorflow.keras model compiled with the loss and having
     input shape = ref_image.shape.
@@ -210,21 +211,36 @@ def generate_pgd_attacks(model, loss, x, y, eps, batch_size,
     - nb_it_max: float max number of iterations
     attack.
     OUTPUTS:
-    - tab_perturbations: array of the same shape as x 
-    representing the pdg attacks.
+    - attacks: array of the same shape as x containing the images if the
+    model cannot predict the correct class or the attacks if the algorithm
+    predicts right.
     COMPUTATION TIME:
     Fast proportionnal to the number of images.
     """
+    predictions = np.argmax(model(K.cast(x,dtype = 'float32')), axis=1)
+    ref = np.argmax(y, axis = 1)
+    errors = ref - predictions
+    images = []
+    labels = []
+    indexes = []
+    for i,error in enumerate(errors):
+        if error == 0:
+            images.append(x[i])
+            labels.append(y[i])
+        else:
+            indexes.append(i)
+    images = np.array(images)
+    labels = np.array(labels)
     tab_perturbations = []
-    nb_batch = len(x) // batch_size + 1
+    nb_batch = len(images) // batch_size + 1
     for i in range(nb_batch):
         end = 0
         if i == nb_batch - 1:
-            end = len(x)
+            end = len(images)
         else:
             end = (i+1)*batch_size
-        x_batch = x[i*batch_size:end]
-        y_batch = y[i*batch_size:end]
+        x_batch = images[i*batch_size:end]
+        y_batch = labels[i*batch_size:end]
         size = end - i*batch_size
         if size == 0:
             break
@@ -237,6 +253,89 @@ def generate_pgd_attacks(model, loss, x, y, eps, batch_size,
                 y_batch, eps, size, step, threshold, nb_it_max)
         for perturbation in perturbations:
             tab_perturbations.append(perturbation)
-    tab_perturbations = np.array(tab_perturbations, dtype = np.float32)
-    return tab_perturbations
+    attacks = []
+    j = 0
+    for i in range(x.shape[0]):
+        if i in indexes:
+            attacks.append(x[i])
+        else:
+            attacks.append(tab_perturbations[j])
+            j+=1
+    attacks = np.array(attacks, dtype = np.float32)
+    return attacks
 
+def generate_pgd_attacks_for_test(model, loss, x, y, eps, batch_size,
+                         step = 0.1, threshold=1e-3, nb_it_max = 20,
+                         accelerated = False):
+    """
+    Computes a pgd attacks for a given x, model and loss. Removes the images
+    where the model doesn't make good predictions already.
+    INPUTS:
+    - model: tensorflow.keras model compiled with the loss and having
+    input shape = ref_image.shape.
+    - loss: element of keras.losses or customized loss respecting
+    the same structure.
+    - x: array representing the input images.
+    - y: label of the input images.
+    - eps: maximal norm of the attack.
+    - step: float gradient step
+    - threshold: float convergence threshold 
+    - nb_it_max: float max number of iterations
+    attack.
+    OUTPUTS:
+    - tab_perturbations: array containing the attacks for images that the
+    model cannot predict.
+    - attacks: array of the same shape as x containing the images if the
+    model cannot predict the correct class or the attacks if the algorithm
+    predicts right.
+    - images: array containing the images that are attacked.
+    - labels: array containing the labels of the images that are attacked.
+    COMPUTATION TIME:
+    Fast proportionnal to the number of images.
+    """
+    predictions = np.argmax(model(K.cast(x,dtype = 'float32')), axis=1)
+    ref = np.argmax(y, axis = 1)
+    errors = ref - predictions
+    images = []
+    labels = []
+    indexes = []
+    for i,error in enumerate(errors):
+        if error == 0:
+            images.append(x[i])
+            labels.append(y[i])
+        else:
+            indexes.append(i)
+    images = np.array(images)
+    labels = np.array(labels)
+    tab_perturbations = []
+    nb_batch = len(images) // batch_size + 1
+    for i in range(nb_batch):
+        end = 0
+        if i == nb_batch - 1:
+            end = len(images)
+        else:
+            end = (i+1)*batch_size
+        x_batch = images[i*batch_size:end]
+        y_batch = labels[i*batch_size:end]
+        size = end - i*batch_size
+        if size == 0:
+            break
+        print("Computing Attacks for batch", i, " Images", i*batch_size, "to", end)
+        if accelerated:
+            perturbations = generate_pgd_attack_on_batch_accelerated(model, loss, x_batch,
+                y_batch, eps, size, step, nb_it = 3)
+        if not accelerated:
+            perturbations = generate_pgd_attack_on_batch(model, loss, x_batch,
+                y_batch, eps, size, step, threshold, nb_it_max)
+        for perturbation in perturbations:
+            tab_perturbations.append(perturbation)
+    attacks = []
+    j = 0
+    for i in range(x.shape[0]):
+        if i in indexes:
+            attacks.append(x[i])
+        else:
+            attacks.append(tab_perturbations[j])
+            j+=1
+    attacks = np.array(attacks, dtype = np.float32)
+    return attacks, tab_perturbations, images, labels
