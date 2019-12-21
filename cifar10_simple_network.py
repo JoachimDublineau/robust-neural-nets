@@ -49,8 +49,10 @@ def train_method_simple():
 
 
 def train_method_defense_fgsm():
+    global epsilon, epsilon_growth
+
     # get optimizer and loss function
-    optimizer = model.optimizer
+    optimizer = tf.keras.optimizers.Adam()
     loss_fn = tf.keras.losses.CategoricalCrossentropy()
 
     # create metrics
@@ -169,6 +171,9 @@ def train_method_defense_fgsm():
         for callback in callbacks:
             callback.on_epoch_end(epoch, logs=epoch_logs)
 
+    # grow epsilon
+    epsilon += epsilon_growth
+
     for callback in callbacks:
         callback.on_train_end()
 
@@ -223,6 +228,7 @@ parser.add_argument("--train-method", default="simple",
                     choices=train_methods.keys(), help="The train method to use. Default is simple")
 parser.add_argument("--epsilon", type=float,
                     help="The value of epsilon to use while training with 'defense_fgsm' traning method")
+parser.add_argument("--epsilon-growth", type=float, help="The value to add to epsilon each epoch", default=0.0)
 parser.add_argument("--alpha", type=zero_one_float,
                     help="The value of alpha to use while training with 'defense_fgsm' traning method. Must be in range [0, 1]. Default is 0.5", default=0.5)
 parser.add_argument(
@@ -244,6 +250,7 @@ output_log = args.output_log
 gpu_id = args.gpu
 train_method = args.train_method
 epsilon = args.epsilon
+epsilon_growth = args.epsilon_growth
 alpha = args.alpha
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = args.tf_log_level
