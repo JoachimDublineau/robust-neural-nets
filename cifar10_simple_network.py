@@ -105,6 +105,8 @@ def train_method_defense_fgsm():
 
     # epoch loop
     for epoch in range(epochs):
+        tf.keras.backend.set_learning_phase(1)
+        train_dataset = train_dataset.shuffle(x_train.shape[0])
         epoch_logs = {}
 
         for callback in callbacks:
@@ -154,6 +156,7 @@ def train_method_defense_fgsm():
             for callback in callbacks:
                 callback.on_batch_end(batch_index, logs=batch_logs)
 
+        tf.keras.backend.set_learning_phase(0)
         # validation batch loop
         for batch_index, (batch_x, batch_y) in enumerate(validation_dataset):
             predictions = model(batch_x)
@@ -252,6 +255,12 @@ train_method = args.train_method
 epsilon = args.epsilon
 epsilon_growth = args.epsilon_growth
 alpha = args.alpha
+
+import random
+
+tf.random.set_seed(42)
+np.random.seed(42)
+random.seed(42)
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = args.tf_log_level
 
