@@ -36,6 +36,14 @@ For example, to train a network on 50 epochs, with a batch size of 32, and to sa
 python cifar10_simple_network.py --epochs 50 --batch-size 32 --weights weights.h5 --verbose
 ```
 
+This script also allows you to train a robust network against FGSM attacks on the CIFAR10 dataset.
+
+For example, to train such a network with a first epsilon of 0 (incrementing by 0.005) and with an alpha of 0.5, you can run the following command.
+
+```
+python cifar10_simple_network.py --epochs 50 --batch-size 32 --train-method defense-fsgm --epsilon 0 --epsilon-growth 0.005 --alpha 0.5
+```
+
 To get more info, run the following command.
 
 ```
