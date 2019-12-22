@@ -1,10 +1,10 @@
 import src
 import tensorflow as tf
 import numpy as np
-import time 
+import time
 import matplotlib.pyplot as plt
 from tensorflow.keras.losses import categorical_crossentropy
-from tensorflow.keras import backend as K 
+from tensorflow.keras import backend as K
 from One_Pixel_Attack import *
 
 x_train, y_train, x_test, y_test = src.cifar10.load_data()
@@ -31,25 +31,5 @@ fig.add_subplot(1, 2, 2)
 plt.imshow(attacks[0])
 plt.show()
 
-fig=plt.figure(figsize=(1, 2))
-fig.add_subplot(1, 2, 1)
-plt.imshow(images[1])
-fig.add_subplot(1, 2, 2)
-plt.imshow(attacks[1])
-plt.show()
-
-fig=plt.figure(figsize=(1, 2))
-fig.add_subplot(1, 2, 1)
-plt.imshow(images[2])
-fig.add_subplot(1, 2, 2)
-plt.imshow(attacks[2])
-plt.show()
-
-def compute_accuracy(model, x, y, batch_size):
-    attacks = generate_one_pixel_attacks(model, x, y, batch_size)
-    scores = model.evaluate(attacks, y)
-    return scores[1]
-
 print(model.evaluate(images, labels)[1])
-print(compute_accuracy(model, images, labels, batch_size))
-
+print(model.evaluate(attacks, labels)[1])
