@@ -12,7 +12,7 @@ def generate_perturbation(img_size, eps, norm=None):
     INPUTS:
     - img_size: iterable giving the dimension of the perturbation.
     - eps: float defining the upper bound of the norms.
-    - norm: 'l2' or 'inf' depending on what norm do you want.
+    - norm: ord argument for numpy.linalg.norm function
     OUTPUTS:
     - perturbation: numpy array of dimension img_size.
     COMPUTATION TIME:
@@ -60,6 +60,7 @@ def projection(point, ref, eps, norm=None):
     - ref: center of the ball on which the projection will be
     done
     - eps: radius of the ball
+    - norm: ord argument for numpy.linalg.norm function
     OUTPUT:
     - projection: array of the same shape of point and ref
     COMPUTATION TIME:
@@ -85,6 +86,7 @@ def generate_pgd_attack(model, loss, ref_image, y_image, eps, norm = None,
     - ref_image: array representing the input image.
     - y_image: label of the input image.
     - eps: maximal norm of the attack.
+    - norm: ord argument for numpy.linalg.norm function
     - step: float gradient step
     - threshold: float convergence threshold
     - nb_it_max: max number of iterations.
@@ -113,13 +115,13 @@ def generate_pgd_attack(model, loss, ref_image, y_image, eps, norm = None,
 
 def projection_on_batch(points, ref, eps, norm = None):
     """
-    Computes the projection of the point vector on the ball
-    centered in ref of radius eps.
+    Computes the projection of the points on the ball centered in ref
+    of radius eps.
     INPUTS:
     - points: array representing the points the we want to project
-    - ref: center of the ball on which the projection will be
-    done
+    - ref: center of the ball on which the projection will be done
     - eps: radius of the ball
+    - norm: ord argument for numpy.linalg.norm function
     OUTPUT:
     - projections: array of the same shape of points
     COMPUTATION TIME:
