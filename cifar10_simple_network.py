@@ -111,7 +111,6 @@ def train_method_defense_fgsm():
 
     # epoch loop
     for epoch in range(epochs):
-        tf.keras.backend.set_learning_phase(1)
         train_dataset = train_dataset.shuffle(x_train.shape[0])
         epoch_logs = {}
 
@@ -140,8 +139,8 @@ def train_method_defense_fgsm():
 
             # forward step
             with tf.GradientTape() as tape:
-                predictions = model(batch_x)
-                predictions_adversarials = model(batch_x_adversarial)
+                predictions = model(batch_x, training=True)
+                predictions_adversarials = model(batch_x_adversarial, training=True)
 
                 loss_value = loss_fn(batch_y, predictions)
                 loss_value_adversarial = loss_fn(batch_y, predictions_adversarials)
@@ -167,10 +166,9 @@ def train_method_defense_fgsm():
             for callback in callbacks:
                 callback.on_batch_end(batch_index, logs=batch_logs)
 
-        tf.keras.backend.set_learning_phase(0)
         # validation batch loop
         for batch_index, (batch_x, batch_y) in enumerate(validation_dataset):
-            predictions = model(batch_x)
+            predictions = model(batch_x, training=False)
             loss_value = loss_fn(batch_y, predictions)
 
             # update metrics
