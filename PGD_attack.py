@@ -1,9 +1,12 @@
+import time
+
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.losses import categorical_crossentropy
-import tensorflow as tf
+
 import src
-import time
+
 
 def generate_perturbation(img_size, eps, norm=None):
     """
@@ -18,14 +21,15 @@ def generate_perturbation(img_size, eps, norm=None):
     COMPUTATION TIME:
     In n*p
     """
-    perturbation = np.random.random(size = img_size)
+    perturbation = np.random.random(size=img_size)
     if norm == np.inf:
         pert_norm = np.max(perturbation)
     else:
         pert_norm = np.linalg.norm(perturbation, norm)
     if pert_norm > eps:
-        perturbation *= eps*np.random.random()/pert_norm
+        perturbation *= eps * np.random.random() / pert_norm
     return perturbation
+
 
 def compute_grad(model, loss, images, labels):
     """
@@ -41,7 +45,10 @@ def compute_grad(model, loss, images, labels):
     COMPUTATION TIME:
     Fast
     """
-    kast = lambda element: K.cast(element, dtype='float32')
+
+    def kast(element):
+        return K.cast(element, dtype="float32")
+
     x = kast(images)
     with tf.GradientTape() as tape:
         tape.watch(x)
@@ -50,6 +57,7 @@ def compute_grad(model, loss, images, labels):
     gradients = tape.gradient(loss_, x)
     signed_grads = tf.sign(gradients)
     return signed_grads
+
 
 def projection(point, ref, eps, norm=None):
     """
@@ -72,10 +80,20 @@ def projection(point, ref, eps, norm=None):
         dist = np.linalg.norm(ref - point, norm)
     if dist < eps:
         return point
-    return eps*(point - ref)/dist
+    return eps * (point - ref) / dist
 
-def generate_pgd_attack(model, loss, ref_image, y_image, eps, norm = None,
-                        step = 0.1, threshold = 1e-3, nb_it_max = 20):
+
+def generate_pgd_attack(
+    model,
+    loss,
+    ref_image,
+    y_image,
+    eps,
+    norm=None,
+    step=0.1,
+    threshold=1e-3,
+    nb_it_max=20,
+):
     """
     Computes a pgd attack for a given ref_image, model and loss.
     INPUTS:
@@ -98,22 +116,30 @@ def generate_pgd_attack(model, loss, ref_image, y_image, eps, norm = None,
     """
     curr_perturbation = generate_perturbation(ref_image.shape, eps, norm)
     signed_grad = compute_grad(model, loss, [ref_image], y_image)[0]
-    dist = threshold+1
+    dist = threshold + 1
     i = 0
     if norm == np.inf:
-        my_norm = lambda x: np.max(x)
+
+        def my_norm(x):
+            return np.max(x)
+
     else:
-        my_norm = lambda x: np.linalg.norm(x, norm)
+
+        def my_norm(x):
+            return np.linalg.norm(x, norm)
+
     while dist > threshold:
-        i+=1
+        i += 1
         prev_perturbation = curr_perturbation
-        curr_perturbation += step*signed_grad
+        curr_perturbation += step * signed_grad
         curr_perturbation = projection(curr_perturbation, ref_image, eps, norm)
         dist = my_norm(prev_perturbation - curr_perturbation)
-        if i > nb_it_max: break
+        if i > nb_it_max:
+            break
     return curr_perturbation
 
-def projection_on_batch(points, ref, eps, norm = None):
+
+def projection_on_batch(points, ref, eps, norm=None):
     """
     Computes the projection of the points on the ball centered in ref
     of radius eps.
@@ -129,20 +155,36 @@ def projection_on_batch(points, ref, eps, norm = None):
     """
     projections = []
     if norm == np.inf:
-        my_norm = lambda x: np.max(x)
+
+        def my_norm(x):
+            return np.max(x)
+
     else:
-        my_norm = lambda x: np.linalg.norm(x, norm)
+
+        def my_norm(x):
+            return np.linalg.norm(x, norm)
+
     for i, point in enumerate(points):
         dist = my_norm(ref[i] - point)
         if dist < eps:
             projections.append(point)
         else:
-            projections.append(eps*(point - ref[i])/dist)
+            projections.append(eps * (point - ref[i]) / dist)
     return np.array(projections)
 
-def generate_pgd_attack_on_batch(model, loss, ref_images, y_images, eps,
-                                 batch_size, step = 0.1, threshold=1e-3,
-                                 nb_it_max = 20, norm = None):
+
+def generate_pgd_attack_on_batch(
+    model,
+    loss,
+    ref_images,
+    y_images,
+    eps,
+    batch_size,
+    step=0.1,
+    threshold=1e-3,
+    nb_it_max=20,
+    norm=None,
+):
     """
     Computes a pgd attack for given ref_images, model and loss.
     INPUTS:
@@ -164,30 +206,40 @@ def generate_pgd_attack_on_batch(model, loss, ref_images, y_images, eps,
     COMPUTATION TIME:
     Fast.
     """
-    curr_perturbations = [generate_perturbation(ref_images[0].shape,eps,norm) \
-        for i in range(batch_size)]
+    curr_perturbations = [
+        generate_perturbation(ref_images[0].shape, eps, norm) for i in range(batch_size)
+    ]
     curr_perturbations = np.array(curr_perturbations)
     signed_grads = compute_grad(model, loss, ref_images, y_images)
     dist = threshold + 1
     count = 0
     if norm == np.inf:
-        my_norm = lambda x: np.max(x)
+
+        def my_norm(x):
+            return np.max(x)
+
     else:
-        my_norm = lambda x: np.linalg.norm(x, norm)
+
+        def my_norm(x):
+            return np.linalg.norm(x, norm)
+
     while dist > threshold:
         count += 1
         prev_perturbations = curr_perturbations
-        curr_perturbations += step*signed_grads
-        curr_perturbations = projection_on_batch(curr_perturbations, ref_images,
-                                                 eps, norm)
+        curr_perturbations += step * signed_grads
+        curr_perturbations = projection_on_batch(
+            curr_perturbations, ref_images, eps, norm
+        )
         diff = curr_perturbations - prev_perturbations
-        dist = my_norm(diff)/batch_size
-        if count > nb_it_max: break
+        dist = my_norm(diff) / batch_size
+        if count > nb_it_max:
+            break
     return curr_perturbations
 
 
-def generate_pgd_attack_on_batch_accelerated(model, loss, ref_images, y_images, eps,
-                                 batch_size, step = 0.1, nb_it = 5, norm = None):
+def generate_pgd_attack_on_batch_accelerated(
+    model, loss, ref_images, y_images, eps, batch_size, step=0.1, nb_it=5, norm=None
+):
     """
     Computes a pgd attack for given ref_images, model and loss.
     INPUTS:
@@ -208,17 +260,32 @@ def generate_pgd_attack_on_batch_accelerated(model, loss, ref_images, y_images, 
     COMPUTATION TIME:
     Fast.
     """
-    curr_perturbations = [generate_perturbation(ref_images[0].shape,eps,norm) for i in range(batch_size)]
+    curr_perturbations = [
+        generate_perturbation(ref_images[0].shape, eps, norm) for i in range(batch_size)
+    ]
     curr_perturbations = np.array(curr_perturbations)
     signed_grads = compute_grad(model, loss, ref_images, y_images)
     for i in range(nb_it):
-        curr_perturbations += step*signed_grads
-        curr_perturbations = projection_on_batch(curr_perturbations, ref_images, eps, norm)
+        curr_perturbations += step * signed_grads
+        curr_perturbations = projection_on_batch(
+            curr_perturbations, ref_images, eps, norm
+        )
     return curr_perturbations
 
-def generate_pgd_attacks(model, loss, x, y, eps, batch_size,
-                         step = 0.1, threshold=1e-3, nb_it_max = 20,
-                         accelerated = False, norm = None):
+
+def generate_pgd_attacks(
+    model,
+    loss,
+    x,
+    y,
+    eps,
+    batch_size,
+    step=0.1,
+    threshold=1e-3,
+    nb_it_max=20,
+    accelerated=False,
+    norm=None,
+):
     """
     Computes a pgd attacks for a given x, model and loss. Removes the images
     where the model doesn't make good predictions already.
@@ -241,13 +308,13 @@ def generate_pgd_attacks(model, loss, x, y, eps, batch_size,
     COMPUTATION TIME:
     Fast proportionnal to the number of images.
     """
-    predictions = np.argmax(model(K.cast(x,dtype = 'float32')), axis=1)
-    ref = np.argmax(y, axis = 1)
+    predictions = np.argmax(model(K.cast(x, dtype="float32")), axis=1)
+    ref = np.argmax(y, axis=1)
     errors = ref - predictions
     images = []
     labels = []
     indexes = []
-    for i,error in enumerate(errors):
+    for i, error in enumerate(errors):
         if error == 0:
             images.append(x[i])
             labels.append(y[i])
@@ -262,19 +329,30 @@ def generate_pgd_attacks(model, loss, x, y, eps, batch_size,
         if i == nb_batch - 1:
             end = len(images)
         else:
-            end = (i+1)*batch_size
-        x_batch = images[i*batch_size:end]
-        y_batch = labels[i*batch_size:end]
-        size = end - i*batch_size
+            end = (i + 1) * batch_size
+        x_batch = images[i * batch_size : end]
+        y_batch = labels[i * batch_size : end]
+        size = end - i * batch_size
         if size == 0:
             break
-        print("Computing Attacks for batch", i, " Images", i*batch_size, "to", end)
+        print("Computing Attacks for batch", i, " Images", i * batch_size, "to", end)
         if accelerated:
-            perturbations = generate_pgd_attack_on_batch_accelerated(model, loss, x_batch,
-                y_batch, eps, size, step, nb_it = 3, norm=norm )
+            perturbations = generate_pgd_attack_on_batch_accelerated(
+                model, loss, x_batch, y_batch, eps, size, step, nb_it=3, norm=norm
+            )
         if not accelerated:
-            perturbations = generate_pgd_attack_on_batch(model, loss, x_batch,
-                y_batch, eps, size, step, threshold, nb_it_max, norm=norm)
+            perturbations = generate_pgd_attack_on_batch(
+                model,
+                loss,
+                x_batch,
+                y_batch,
+                eps,
+                size,
+                step,
+                threshold,
+                nb_it_max,
+                norm=norm,
+            )
         for perturbation in perturbations:
             tab_perturbations.append(perturbation)
     attacks = []
@@ -284,13 +362,24 @@ def generate_pgd_attacks(model, loss, x, y, eps, batch_size,
             attacks.append(x[i])
         else:
             attacks.append(tab_perturbations[j])
-            j+=1
-    attacks = np.array(attacks, dtype = np.float32)
+            j += 1
+    attacks = np.array(attacks, dtype=np.float32)
     return attacks
 
-def generate_pgd_attacks_for_test(model, loss, x, y, eps, batch_size,
-                         step = 0.1, threshold=1e-3, nb_it_max = 20,
-                         accelerated = False, norm = None):
+
+def generate_pgd_attacks_for_test(
+    model,
+    loss,
+    x,
+    y,
+    eps,
+    batch_size,
+    step=0.1,
+    threshold=1e-3,
+    nb_it_max=20,
+    accelerated=False,
+    norm=None,
+):
     """
     Computes a pgd attacks for a given x, model and loss. Removes the images
     where the model doesn't make good predictions already.
@@ -318,13 +407,13 @@ def generate_pgd_attacks_for_test(model, loss, x, y, eps, batch_size,
     COMPUTATION TIME:
     Fast proportionnal to the number of images.
     """
-    predictions = np.argmax(model(K.cast(x,dtype = 'float32')), axis=1)
-    ref = np.argmax(y, axis = 1)
+    predictions = np.argmax(model(K.cast(x, dtype="float32")), axis=1)
+    ref = np.argmax(y, axis=1)
     errors = ref - predictions
     images = []
     labels = []
     indexes = []
-    for i,error in enumerate(errors):
+    for i, error in enumerate(errors):
         if error == 0:
             images.append(x[i])
             labels.append(y[i])
@@ -339,19 +428,30 @@ def generate_pgd_attacks_for_test(model, loss, x, y, eps, batch_size,
         if i == nb_batch - 1:
             end = len(images)
         else:
-            end = (i+1)*batch_size
-        x_batch = images[i*batch_size:end]
-        y_batch = labels[i*batch_size:end]
-        size = end - i*batch_size
+            end = (i + 1) * batch_size
+        x_batch = images[i * batch_size : end]
+        y_batch = labels[i * batch_size : end]
+        size = end - i * batch_size
         if size == 0:
             break
-        print("Computing Attacks for batch", i, " Images", i*batch_size, "to", end)
+        print("Computing Attacks for batch", i, " Images", i * batch_size, "to", end)
         if accelerated:
-            perturbations = generate_pgd_attack_on_batch_accelerated(model, loss, x_batch,
-                y_batch, eps, size, step, nb_it = 3, norm = norm)
+            perturbations = generate_pgd_attack_on_batch_accelerated(
+                model, loss, x_batch, y_batch, eps, size, step, nb_it=3, norm=norm
+            )
         if not accelerated:
-            perturbations = generate_pgd_attack_on_batch(model, loss, x_batch,
-                y_batch, eps, size, step, threshold, nb_it_max, norm=norm)
+            perturbations = generate_pgd_attack_on_batch(
+                model,
+                loss,
+                x_batch,
+                y_batch,
+                eps,
+                size,
+                step,
+                threshold,
+                nb_it_max,
+                norm=norm,
+            )
         for perturbation in perturbations:
             tab_perturbations.append(perturbation)
     attacks = []
@@ -361,6 +461,6 @@ def generate_pgd_attacks_for_test(model, loss, x, y, eps, batch_size,
             attacks.append(x[i])
         else:
             attacks.append(tab_perturbations[j])
-            j+=1
-    attacks = np.array(attacks, dtype = np.float32)
+            j += 1
+    attacks = np.array(attacks, dtype=np.float32)
     return attacks, tab_perturbations, images, labels
