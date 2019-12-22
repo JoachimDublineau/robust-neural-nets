@@ -6,18 +6,6 @@ import time
 from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras import backend as K
 
-# Test generate_perturbation
-perturbation = generate_perturbation((10,10), 1)
-print(perturbation)
-print(np.linalg.norm(perturbation))
-
-# Test projection:
-a = np.array([2,2], dtype = np.float32)
-b = np.array([1,1], dtype = np.float32)
-print(a-b)
-print(np.linalg.norm(a-b,None))
-print(projection(a, b, 1))
-
 # # Test PGD Attack:
 x_train, y_train, x_test, y_test = src.cifar10.load_data()
 
@@ -60,75 +48,31 @@ fig.add_subplot(1, 3, 2)
 plt.imshow(image + perturbation)
 plt.show()
 
-# # Test PGD Attack on batch:
-batch_size = 50
-images = x_test[:batch_size]
-labels = y_test[:batch_size]
-perturbations = generate_pgd_attack_on_batch(model, categorical_crossentropy,
-                             images, labels, eps = 1, batch_size=batch_size)
-print()
-for i in range(batch_size):
-    print("For image n°", i)
-    print("Perturbation:")
-    # print(perturbations[i])
-    print("Norm of pertubation:", np.linalg.norm(perturbations[i]))
-    print("Image:")
-    # print(images[i])
-    print("Norm:", np.linalg.norm(images[i]))
-    print("Model prediction:", np.argmax(model(K.cast([images[i]],
-                                           dtype = 'float32'))[0]))
-    print("Perturbated image:")
-    print("Norm:", np.linalg.norm(images[i] + perturbations[i]))
-    print("Model prediction:", np.argmax(model(K.cast([images[i] + perturbations[i]],
-                                        dtype = 'float32'))[0]))
-    print()
-
-
 # Test PGD Attack on batch:
 random_indexes = np.random.choice(x_test.shape[0], 150)
+batch_size = 50
 
 images = x_test[random_indexes]
 labels = y_test[random_indexes]
 model.evaluate(images, labels)
-# print(images.shape)
-# print(labels.shape)
-# t0 = time.time()
-# perturbations = generate_pgd_attacks(model, categorical_crossentropy,
-#                              images, labels, eps=1, batch_size=batch_size, step= 0.1,
-#                              threshold=1e-3, nb_it_max=20, accelerated=True)
-# t1 = time.time()
-# print("Computation time for 100 images:", t1-t0)
-# perturbations = generate_pgd_attacks(model, categorical_crossentropy,
-#                              images, labels, eps=1, batch_size=batch_size, step= 0.1,
-#                              threshold=1e-3, nb_it_max=20, accelerated=False)
-# t2 = time.time()
-# print("Computation time for 100 images:", t2-t1)
-# print(perturbations[1])
+t0 = time.time()
+perturbations = generate_pgd_attacks(model, categorical_crossentropy,
+                             images, labels, eps=1, batch_size=batch_size, step= 0.1,
+                             threshold=1e-3, nb_it_max=20, accelerated=True)
+t1 = time.time()
+print("Computation time for 100 images:", t1-t0)
+perturbations = generate_pgd_attacks(model, categorical_crossentropy,
+                             images, labels, eps=1, batch_size=batch_size, step= 0.1,
+                             threshold=1e-3, nb_it_max=20, accelerated=False)
+t2 = time.time()
+print("Computation time for 100 images:", t2-t1)
+print(perturbations[1])
 
-def compute_efficiency(model, loss, x, y, eps, batch_size):
-    attacks, perturbations, images, labels = generate_pgd_attacks_for_test(model, loss, x, y, eps, batch_size)
-    predictions_on_pert = np.argmax(model(K.cast(images + perturbations,
-                                        dtype = 'float32')), axis=1)
-    predictions = np.argmax(model(K.cast(images,dtype = 'float32')), axis=1)
-    nb_mistakes = np.count_nonzero(predictions_on_pert-predictions)
-    damages = nb_mistakes/images.shape[0]
-    return damages
 
 def compute_accuracy(model, loss, x, y, eps, batch_size, norm = None):
     attacks = generate_pgd_attacks(model, loss, x, y, eps, batch_size, norm=norm)
     scores = model.evaluate(x + attacks, y)
     return scores[1]
-
-# tab = []
-# tab_eps = []
-# for i in range(10):
-#     eps = 0.1 + i*0.2
-#     tab_eps.append(eps)
-#     tab.append(compute_efficiency(model, categorical_crossentropy, images, labels, eps, batch_size))
-# plt.xlabel("Eps")
-# plt.ylabel("Attack efficiency")
-# plt.plot(tab_eps, tab)
-# plt.show()
 
 tab = []
 tab_eps = []
