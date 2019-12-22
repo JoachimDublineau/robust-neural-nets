@@ -157,6 +157,7 @@ def generate_pgd_attack_on_batch(model, loss, ref_images, y_images, eps,
     - step: float gradient step
     - threshold: float convergence threshold
     - nb_it_max: int max number of iterations
+    - norm: ord argument for numpy.linalg.norm function
     OUTPUTS:
     - curr_perturbation: array of the same shape as ref_image
     representing the pdg attack.
@@ -200,6 +201,7 @@ def generate_pgd_attack_on_batch_accelerated(model, loss, ref_images, y_images, 
     - batch_size: int, size of ref_images
     - step: float gradient step
     - nb_it: int number of iterations
+    - norm: ord argument for numpy.linalg.norm function
     OUTPUTS:
     - curr_perturbation: array of the same shape as ref_image
     representing the pdg attack.
@@ -230,8 +232,8 @@ def generate_pgd_attacks(model, loss, x, y, eps, batch_size,
     - eps: maximal norm of the attack.
     - step: float gradient step
     - threshold: float convergence threshold
-    - nb_it_max: float max number of iterations
-    attack.
+    - nb_it_max: float max number of iterations attack.
+    - norm: ord argument for numpy.linalg.norm function
     OUTPUTS:
     - attacks: array of the same shape as x containing the images if the
     model cannot predict the correct class or the attacks if the algorithm
@@ -304,6 +306,7 @@ def generate_pgd_attacks_for_test(model, loss, x, y, eps, batch_size,
     - threshold: float convergence threshold
     - nb_it_max: float max number of iterations
     attack.
+    - norm: ord argument for numpy.linalg.norm function
     OUTPUTS:
     - tab_perturbations: array containing the attacks for images that the
     model cannot predict.
