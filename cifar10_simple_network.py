@@ -1,5 +1,6 @@
 import argparse
 import os
+import random
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,12 +23,13 @@ def zero_one_float(x):
     try:
         x = float(x)
     except ValueError:
-        raise argparse.ArgumentTypeError('{} not a float'.format(x))
+        raise argparse.ArgumentTypeError("{} not a float".format(x))
 
     if not 0 <= x <= 1:
-        raise argparse.ArgumentTypeError('{} not in range [0, 1]'.format(x))
+        raise argparse.ArgumentTypeError("{} not in range [0, 1]".format(x))
 
     return x
+
 
 # Train methods functions
 # -------------------------
@@ -49,8 +51,10 @@ def train_method_simple():
 
 
 def train_method_defense_fgsm():
+    global epsilon, epsilon_growth
+
     # get optimizer and loss function
-    optimizer = model.optimizer
+    optimizer = tf.keras.optimizers.Adam()
     loss_fn = tf.keras.losses.CategoricalCrossentropy()
 
     # create metrics
@@ -62,37 +66,41 @@ def train_method_defense_fgsm():
 
     # store metrics related to an epoch to make the process easier
     epoch_metrics = {
-        'loss': train_loss,
-        'accuracy': train_accuracy,
-        'val_loss': validation_loss,
-        'val_accuracy': validation_accuracy,
+        "loss": train_loss,
+        "accuracy": train_accuracy,
+        "val_loss": validation_loss,
+        "val_accuracy": validation_accuracy,
     }
 
     # create datasets
-    train_dataset = tf.data.Dataset.from_tensor_slices(
-        (x_train, y_train)).shuffle(x_train.shape[0]).batch(batch_size)
-    validation_dataset = tf.data.Dataset.from_tensor_slices(
-        (x_test, y_test)).batch(batch_size)
+    train_dataset = (
+        tf.data.Dataset.from_tensor_slices((x_train, y_train))
+        .shuffle(x_train.shape[0])
+        .batch(batch_size)
+    )
+    validation_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(
+        batch_size
+    )
 
     # prepare callbacks
     callback_metrics = list(epoch_metrics.keys())
     callback_model = model._get_callback_model()
     callback_model.stop_training = False
     logger_params = {
-        'epochs': epochs,
-        'steps': None,
-        'verbose': int(verbose),
-        'batch_size': batch_size,
-        'samples': x_train.shape[0],
-        'do_validation': True,
-        'metrics': callback_metrics,
+        "epochs": epochs,
+        "steps": None,
+        "verbose": int(verbose),
+        "batch_size": batch_size,
+        "samples": x_train.shape[0],
+        "do_validation": True,
+        "metrics": callback_metrics,
     }
 
     base_logger = cbks.BaseLogger()
     callbacks = [base_logger, csv_logger, checkpoint]
 
     if verbose:
-        progressbar_callback = cbks.ProgbarLogger(count_mode='samples')
+        progressbar_callback = cbks.ProgbarLogger(count_mode="samples")
         callbacks.insert(1, progressbar_callback)
 
     for callback in callbacks:
@@ -103,6 +111,7 @@ def train_method_defense_fgsm():
 
     # epoch loop
     for epoch in range(epochs):
+        train_dataset = train_dataset.shuffle(x_train.shape[0])
         epoch_logs = {}
 
         for callback in callbacks:
@@ -110,28 +119,33 @@ def train_method_defense_fgsm():
 
         # batch loop
         for batch_index, (batch_x, batch_y) in enumerate(train_dataset):
-            batch_logs = {'batch': batch_index, 'size': batch_x.shape[0]}
+            batch_logs = {"batch": batch_index, "size": batch_x.shape[0]}
 
             for callback in callbacks:
                 callback.on_batch_begin(batch_index, logs=batch_logs)
 
             # compute signed gradients for batch x and create adversarial images
             batch_x_signed_gradients = src.attacks.compute_signed_gradients(
-                batch_x, batch_y, model, tf.keras.losses.categorical_crossentropy, batch_size=batch_size, verbose=False)
+                batch_x,
+                batch_y,
+                model,
+                tf.keras.losses.categorical_crossentropy,
+                batch_size=batch_size,
+                verbose=False,
+            )
             batch_x_adversarial = tf.keras.backend.clip(
-                batch_x + epsilon * batch_x_signed_gradients, 0, 1)
+                batch_x + epsilon * batch_x_signed_gradients, 0, 1
+            )
 
             # forward step
             with tf.GradientTape() as tape:
-                predictions = model(batch_x)
-                predictions_adversarials = model(batch_x_adversarial)
+                predictions = model(batch_x, training=True)
+                predictions_adversarials = model(batch_x_adversarial, training=True)
 
                 loss_value = loss_fn(batch_y, predictions)
-                loss_value_adversarial = loss_fn(
-                    batch_y, predictions_adversarials)
+                loss_value_adversarial = loss_fn(batch_y, predictions_adversarials)
 
-                loss_value = alpha * loss_value + \
-                    (1 - alpha) * loss_value_adversarial
+                loss_value = alpha * loss_value + (1 - alpha) * loss_value_adversarial
 
             # backward step
             grads = tape.gradient(loss_value, model.trainable_weights)
@@ -143,8 +157,8 @@ def train_method_defense_fgsm():
             batch_accuracy(batch_y, predictions)
 
             # update batch logs
-            batch_logs['loss'] = float(loss_value)
-            batch_logs['accuracy'] = float(batch_accuracy.result())
+            batch_logs["loss"] = float(loss_value)
+            batch_logs["accuracy"] = float(batch_accuracy.result())
 
             # reset batch metric
             batch_accuracy.reset_states()
@@ -154,7 +168,7 @@ def train_method_defense_fgsm():
 
         # validation batch loop
         for batch_index, (batch_x, batch_y) in enumerate(validation_dataset):
-            predictions = model(batch_x)
+            predictions = model(batch_x, training=False)
             loss_value = loss_fn(batch_y, predictions)
 
             # update metrics
@@ -169,20 +183,22 @@ def train_method_defense_fgsm():
         for callback in callbacks:
             callback.on_epoch_end(epoch, logs=epoch_logs)
 
+    # grow epsilon
+    epsilon += epsilon_growth
+
     for callback in callbacks:
         callback.on_train_end()
 
 
 train_methods = {
     "simple": train_method_simple,
-    "defense-fgsm": train_method_defense_fgsm
+    "defense-fgsm": train_method_defense_fgsm,
 }
 
 # Parser configuration
 # -------------------------
 
-parser = argparse.ArgumentParser(
-    description="Script to train a simple CIFAR10 network")
+parser = argparse.ArgumentParser(description="Script to train a simple CIFAR10 network")
 parser.add_argument(
     "-e", "--epochs", help="Number of epochs. Default is 20", type=int, default=20
 )
@@ -219,12 +235,29 @@ parser.add_argument(
     default=None,
 )
 
-parser.add_argument("--train-method", default="simple",
-                    choices=train_methods.keys(), help="The train method to use. Default is simple")
-parser.add_argument("--epsilon", type=float,
-                    help="The value of epsilon to use while training with 'defense_fgsm' traning method")
-parser.add_argument("--alpha", type=zero_one_float,
-                    help="The value of alpha to use while training with 'defense_fgsm' traning method. Must be in range [0, 1]. Default is 0.5", default=0.5)
+parser.add_argument(
+    "--train-method",
+    default="simple",
+    choices=train_methods.keys(),
+    help="The train method to use. Default is simple",
+)
+parser.add_argument(
+    "--epsilon",
+    type=float,
+    help="The value of epsilon to use while training with 'defense_fgsm' traning method",
+)
+parser.add_argument(
+    "--epsilon-growth",
+    type=float,
+    help="The value to add to epsilon each epoch",
+    default=0.0,
+)
+parser.add_argument(
+    "--alpha",
+    type=zero_one_float,
+    help="The value of alpha to use while training with 'defense_fgsm' traning method. Must be in range [0, 1]. Default is 0.5",
+    default=0.5,
+)
 parser.add_argument(
     "--tf-log-level",
     help="Tensorflow minimum cpp log level. Default is 0",
@@ -244,7 +277,13 @@ output_log = args.output_log
 gpu_id = args.gpu
 train_method = args.train_method
 epsilon = args.epsilon
+epsilon_growth = args.epsilon_growth
 alpha = args.alpha
+
+
+tf.random.set_seed(42)
+np.random.seed(42)
+random.seed(42)
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = args.tf_log_level
 
@@ -277,10 +316,8 @@ x_train, y_train, x_test, y_test = src.cifar10.load_data()
 x_train = x_train.astype("float32") / 255
 x_test = x_test.astype("float32") / 255
 
-y_train = tf.keras.utils.to_categorical(
-    y_train, num_classes=len(src.cifar10.labels))
-y_test = tf.keras.utils.to_categorical(
-    y_test, num_classes=len(src.cifar10.labels))
+y_train = tf.keras.utils.to_categorical(y_train, num_classes=len(src.cifar10.labels))
+y_test = tf.keras.utils.to_categorical(y_test, num_classes=len(src.cifar10.labels))
 
 if verbose:
     print("Data is loaded.")
@@ -313,8 +350,7 @@ if path_weights is not None and os.path.exists(path_weights):
     model.load_weights(path_weights)
 
 csv_logger = CSVLogger(output_log, append=True, separator=";")
-checkpoint = ModelCheckpoint(
-    path_weights, verbose=int(verbose), save_freq="epoch")
+checkpoint = ModelCheckpoint(path_weights, verbose=int(verbose), save_freq="epoch")
 
 train_methods[train_method]()
 

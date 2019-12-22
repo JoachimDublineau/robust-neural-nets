@@ -51,7 +51,7 @@ for index in  range(len(args.path)):
 
     for metric_index, metric in enumerate(data.columns[1:]):
         if metric != epsilon:
-            axes[metric_index].plot(data[epsilon], data[metric], label=None if args.labels is None else args.labels[index])
+            axes[metric_index].plot(data[epsilon], data[metric], label=None if args.labels is None else args.labels[index], alpha=0.7 if args.labels is not None else 1.0)
             axes[metric_index].set_ylabel(metric)
             axes[metric_index].set_xlabel(epsilon)
 
