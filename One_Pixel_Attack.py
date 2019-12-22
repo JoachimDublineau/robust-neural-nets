@@ -1,10 +1,22 @@
 import numpy as np
-from tensorflow.keras import backend as K 
+from tensorflow.keras import backend as K
 
-def generate_one_pixel_attacks_on_batch(model, images, labels, eps=0):
+def generate_one_pixel_attacks_on_batch(model, images, labels):
+    """
+    Computes a one pixel attack for a given x, model and loss.
+    INPUTS:
+    - model: tensorflow.keras model compiled with the loss and having
+    input shape = images.shape.
+    - images: array representing the input image.
+    - labels: label of the input image.
+    OUTPUTS:
+    - attacks: array of the same shape as images representing the attacks.
+    COMPUTATION TIME:
+    Fast.
+    """
     n,i,j,k = images.shape
-    x_index = np.round(np.random.normal(i/2, int(8*i/32), n))
-    y_index = np.round(np.random.normal(j/2, int(8*j/32), n))
+    x_index = np.round(np.random.normal(i/2, int(6*i/32), n))
+    y_index = np.round(np.random.normal(j/2, int(6*j/32), n))
     # z_index = np.random.randint(0, 3, n)
     attacks = []
     for p in range(n):
@@ -13,11 +25,24 @@ def generate_one_pixel_attacks_on_batch(model, images, labels, eps=0):
         index = int(y_index[p])
         y = (index if index>=0 and index<j else j-1)
         image = images[p]
-        image[x,y,:] *= eps 
+        image[x,y,:] *= eps
         attacks.append(image)
     return attacks
 
 def generate_one_pixel_attacks(model, x, y, batch_size = 10):
+    """
+    Computes a one pixel attack for a given x, model and loss.
+    INPUTS:
+    - model: tensorflow.keras model compiled with the loss and having
+    input shape = x.shape.
+    - x: array representing the input image.
+    - y: label of the input image.
+    - batch_size: int, size of the batch for computation.
+    OUTPUTS:
+    - attacks: array of the same shape as x representing the attacks.
+    COMPUTATION TIME:
+    Fast.
+    """
     predictions = np.argmax(model(K.cast(x,dtype = 'float32')), axis=1)
     ref = np.argmax(y, axis = 1)
     errors = ref - predictions
@@ -59,7 +84,3 @@ def generate_one_pixel_attacks(model, x, y, batch_size = 10):
             j+=1
     attacks = np.array(attacks, dtype = np.float32)
     return attacks
-
-
-
-    
